@@ -66,15 +66,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar-brand {
-    display: block;
-    width: 120px;
-    height: 60px;
-    margin-right: 20px;
-
-    background-image: url("./logo.png");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
+display: block;
+width: 120px;
+height: 60px;
+margin-right: 20px;
+background-image: url("./logo.png");
+background-repeat: no-repeat;
+background-position: center;
+background-size: contain;
 }
 
 /* ---- Кнопки ---- */
@@ -413,7 +412,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .admin-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     margin-bottom: 40px;
 }
@@ -510,6 +509,30 @@ tbody tr:hover {
     }
     .hero {
         padding: 40px 0;
+    }
+    .countdown-wrapper {
+        padding: 16px 12px;
+        margin: 20px auto;
+        max-width: 92%;
+    }
+    .countdown-wrapper h3 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+    .countdown {
+        gap: 8px;
+    }
+    .countdown-item {
+        min-width: 65px;
+        padding: 10px 4px;
+    }
+    .countdown-item span {
+        font-size: 1.6rem;
+    }
+    .countdown-label {
+        font-size: 0.72rem;
+        letter-spacing: 0.5px;
+        margin-top: 3px;
     }
     table, th, td {
         font-size: 0.9rem;

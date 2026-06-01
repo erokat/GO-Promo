@@ -34,8 +34,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const res = await fetch("config.json?v=" + Date.now());
     config = await res.json();
+    checkRegistrationPeriod();
   } catch (err) {
     console.error("ОШИБКА: Не удалось загрузить config.json", err);
+  }
+
+  function checkRegistrationPeriod() {
+    const btn = document.getElementById("submitBtn");
+    const msg = document.getElementById("formMessage");
+    if (!btn) return true;
+
+    const now = new Date();
+
+    if (config.startDate) {
+      const start = new Date(config.startDate);
+      if (now < start) {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "not-allowed";
+        btn.textContent = "Регистрация еще не началась";
+        if (msg) {
+          msg.textContent = `Регистрация чеков начнется ${start.toLocaleDateString("ru-RU", { day: 'numeric', month: 'long', year: 'numeric' })} в ${start.toLocaleTimeString("ru-RU", { hour: '2-digit', minute: '2-digit' })}.`;
+          msg.className = "message info";
+        }
+        return false;
+      }
+    }
+
+    if (config.endDate || config.drawDate) {
+      const end = new Date(config.endDate || config.drawDate);
+      if (now > end) {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "not-allowed";
+        btn.textContent = "Регистрация завершена";
+        if (msg) {
+          msg.textContent = `Регистрация чеков завершена ${end.toLocaleDateString("ru-RU", { day: 'numeric', month: 'long', year: 'numeric' })} в ${end.toLocaleTimeString("ru-RU", { hour: '2-digit', minute: '2-digit' })}.`;
+          msg.className = "message error";
+        }
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // ---- ЛОГИКА ОТСЧЕТА ВРЕМЕНИ ----
@@ -218,6 +259,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const btn = document.getElementById("submitBtn");
     const msg = document.getElementById("formMessage");
 
+    if (!checkRegistrationPeriod()) {
+      return;
+    }
+
     const receipt = document.getElementById("receipt").value.trim();
     const name = document.getElementById("name").value.trim();
     const phone = document.getElementById("phone").value.trim();
@@ -353,12 +398,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           const json = JSON.parse(text);
           if (json.success) {
             data = json.winners || [];
+            winners = data;
           } else {
             data = [];
+            winners = [];
           }
         } catch (e) {
           console.warn("GAS не вернул JSON. Ответ сервера:", text);
           data = [];
+          winners = [];
         }
       }
 
@@ -407,6 +455,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     displayedParticipants = 0;
     document.getElementById("participantsBody").innerHTML = "";
 
+    await loadWinners();
+
     if (!useMock) {
       try {
         const url = new URL(config.googleScriptUrl);
@@ -435,8 +485,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("statTotalParticipants").textContent =
       participants.length;
     document.getElementById("statTotalWinners").textContent = winners.length;
-    document.getElementById("statLastDraw").textContent =
-      winners.length > 0 ? formatDate(winners[winners.length - 1].date) : "-";
   }
 
   // Отрисовка таблицы с пагинацией (по кнопке "Показать еще")
