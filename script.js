@@ -265,7 +265,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const receipt = document.getElementById("receipt").value.trim();
     const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
+    const phoneInput = document.getElementById("phone").value.trim();
+
+    // Ограничение длины имени
+    if (name.length < 2 || name.length > 100) {
+      msg.textContent = "Имя должно быть длиной от 2 до 100 символов.";
+      msg.className = "message error";
+      return;
+    }
 
     // Проверка номера ФД
     if (!/^000081\d{6}$/.test(receipt)) {
@@ -274,10 +281,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    // Простейшая проверка формата телефона
-    if (!/^\+?[0-9]{8,15}$/.test(phone)) {
-      msg.textContent =
-        "Пожалуйста, введите корректный номер телефона (от 8 до 15 цифр, может начинаться с +).";
+    // Нормализация номера телефона (удаляем +373 и 373, а также любые не-цифры)
+    let normalizedPhone = phoneInput.replace(/\D/g, "");
+    if (normalizedPhone.indexOf("373") === 0) {
+      normalizedPhone = normalizedPhone.substring(3);
+    }
+
+    if (!/^\d{8}$/.test(normalizedPhone)) {
+      msg.textContent = "Пожалуйста, введите корректный номер телефона (должен состоять ровно из 8 цифр, например, 77712345).";
       msg.className = "message error";
       return;
     }
@@ -299,7 +310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         participants.unshift({
           receipt,
           name,
-          phone,
+          phone: normalizedPhone,
           date: new Date().toLocaleDateString(),
           won: false,
         });
@@ -309,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         promoForm.reset();
       } else {
         // БОЕВОЙ РЕЖИМ: Отправка данных в Google Apps Script
-        const payload = { action: "register", receipt, name, phone };
+        const payload = { action: "register", receipt, name, phone: normalizedPhone };
 
         const res = await fetch(config.googleScriptUrl, {
           method: "POST",
@@ -453,31 +464,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadAdminData() {
     displayedParticipants = 0;
-    document.getElementById("participantsBody").innerHTML = "";
+    document.getElementById("participantsBody").innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted, #888);">
+          <div class="loader-spinner" style="display: inline-block; width: 22px; height: 22px; border: 2.5px solid #333; border-top-color: var(--primary, #00a658); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 12px; vertical-align: middle;"></div>
+          Загрузка участников из Google Таблиц...
+        </td>
+      </tr>
+    `;
 
-    await loadWinners();
+    if (useMock) {
+      await loadWinners();
+      renderAdminStats();
+      renderParticipants(participants);
+      return;
+    }
 
-    if (!useMock) {
-      try {
-        const url = new URL(config.googleScriptUrl);
-        url.searchParams.append("action", "participants");
-        if (adminToken) {
-          url.searchParams.append("token", adminToken);
-        }
-        const res = await fetch(url.toString());
-        const json = await res.json();
-        if (json.success) {
-          participants = json.participants || [];
-        }
-      } catch (err) {
-        console.error("Ошибка при загрузке участников:", err);
+    try {
+      const url = new URL(config.googleScriptUrl);
+      url.searchParams.append("action", "participants");
+      if (adminToken) {
+        url.searchParams.append("token", adminToken);
       }
+
+      // Выгружаем победителей и участников параллельно для ускорения входа
+      const [_, res] = await Promise.all([
+        loadWinners().catch(err => console.error("Ошибка загрузки победителей:", err)),
+        fetch(url.toString()).then(r => r.json()).catch(err => {
+          console.error("Ошибка загрузки участников:", err);
+          return { success: false };
+        })
+      ]);
+
+      if (res && res.success) {
+        participants = res.participants || [];
+      }
+    } catch (err) {
+      console.error("Ошибка при загрузке данных админки:", err);
     }
 
     renderAdminStats();
-
-    // В боевом режиме необходимо запрашивать всех участников через GET/POST запрос
-    // Для примера ограничиваемся локальным/демо массивом
     renderParticipants(participants);
   }
 
@@ -491,6 +517,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderParticipants(list) {
     const tbody = document.getElementById("participantsBody");
     tbody.innerHTML = ""; // Очищаем таблицу
+
+    // Сортировка: победители всегда в самом верху списка
+    list.sort((a, b) => {
+      const aWon = !!a.won;
+      const bWon = !!b.won;
+      if (aWon && !bWon) return -1;
+      if (!aWon && bWon) return 1;
+      return 0;
+    });
 
     // Берем первые PAGE_SIZE (20)
     let toShow = list.slice(0, PAGE_SIZE);
@@ -524,12 +559,235 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       if (p.won) tr.style.backgroundColor = "rgba(46, 204, 113, 0.05)"; // Подсветка победителя
       tr.innerHTML = `
-                <td><strong>${p.receipt}</strong> ${p.won ? '<span style="color:#2ecc71;font-size:0.85rem;margin-left:5px;">(Победитель)</span>' : ""}</td>
+                <td><strong>${p.receipt}</strong></td>
                 <td>${p.name}</td>
                 <td>${p.phone}</td>
                 <td>${formatDate(p.date)}</td>
+                <td>
+                  ${p.won ? `
+                    <span style="color:#2ecc71;font-weight:bold;margin-right:10px;">Победитель</span>
+                    <button class="btn remove-winner-btn" data-receipt="${p.receipt}" onclick="window.removeWinnerAction(this)" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
+                  ` : `<span style="color:#999;font-size:0.9rem;">Участник</span>`}
+                </td>
             `;
       tbody.appendChild(tr);
+    });
+  }
+
+  // ---- ПОДДЕРЖКА КРАСИВЫХ И БЕЗОПАСНЫХ ДИАЛОГОВ (БЕЗ БЛОКИРУЮЩИХ WINDOW.ALERT/CONFIRM) ----
+  window.showConfirmDialog = (message) => {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "modal";
+      overlay.style.zIndex = "3000";
+
+      const content = document.createElement("div");
+      content.className = "modal-content";
+      content.style.maxWidth = "420px";
+      content.style.padding = "30px";
+      content.style.textAlign = "center";
+      content.style.borderRadius = "12px";
+      content.style.border = "1px solid #333";
+      content.style.boxShadow = "0 20px 40px rgba(0,0,0,0.5)";
+
+      const title = document.createElement("h3");
+      title.textContent = "Подтверждение";
+      title.style.marginBottom = "15px";
+      title.style.fontSize = "1.3rem";
+      title.style.color = "var(--error, #e74c3c)";
+
+      const text = document.createElement("p");
+      text.style.fontSize = "1rem";
+      text.style.marginBottom = "25px";
+      text.style.lineHeight = "1.6";
+      text.style.color = "#ddd";
+      text.textContent = message;
+
+      const btnContainer = document.createElement("div");
+      btnContainer.style.display = "flex";
+      btnContainer.style.justifyContent = "center";
+      btnContainer.style.gap = "15px";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn";
+      cancelBtn.textContent = "Отмена";
+      cancelBtn.style.padding = "10px 20px";
+      cancelBtn.style.background = "#222";
+      cancelBtn.style.color = "#ccc";
+      cancelBtn.style.border = "1px solid #444";
+      cancelBtn.style.cursor = "pointer";
+      cancelBtn.style.borderRadius = "6px";
+
+      const confirmBtn = document.createElement("button");
+      confirmBtn.className = "btn";
+      confirmBtn.textContent = "Да, сбросить";
+      confirmBtn.style.padding = "10px 20px";
+      confirmBtn.style.background = "var(--error, #e74c3c)";
+      confirmBtn.style.color = "white";
+      confirmBtn.style.border = "none";
+      confirmBtn.style.cursor = "pointer";
+      confirmBtn.style.borderRadius = "6px";
+      confirmBtn.style.fontWeight = "bold";
+
+      cancelBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      };
+
+      confirmBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      };
+
+      btnContainer.appendChild(cancelBtn);
+      btnContainer.appendChild(confirmBtn);
+      content.appendChild(title);
+      content.appendChild(text);
+      content.appendChild(btnContainer);
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
+    });
+  };
+
+  window.showAlertDialog = (message, isSuccess = false) => {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "modal";
+      overlay.style.zIndex = "3000";
+
+      const content = document.createElement("div");
+      content.className = "modal-content";
+      content.style.maxWidth = "420px";
+      content.style.padding = "30px";
+      content.style.textAlign = "center";
+      content.style.borderRadius = "12px";
+      content.style.border = "1px solid #333";
+      content.style.boxShadow = "0 20px 40px rgba(0,0,0,0.5)";
+
+      const title = document.createElement("h3");
+      title.style.marginBottom = "15px";
+      title.style.fontSize = "1.3rem";
+      if (isSuccess) {
+        title.textContent = "Успешно!";
+        title.style.color = "var(--primary, #00a658)";
+      } else {
+        title.textContent = "Уведомление";
+        title.style.color = "#ffcc00";
+      }
+
+      const text = document.createElement("p");
+      text.style.fontSize = "1rem";
+      text.style.marginBottom = "25px";
+      text.style.lineHeight = "1.6";
+      text.style.color = "#ddd";
+      text.textContent = message;
+
+      const okBtn = document.createElement("button");
+      okBtn.className = "btn";
+      okBtn.textContent = "ОК";
+      okBtn.style.padding = "10px 30px";
+      okBtn.style.background = isSuccess ? "var(--primary, #00a658)" : "#444";
+      okBtn.style.color = "white";
+      okBtn.style.border = "none";
+      okBtn.style.cursor = "pointer";
+      okBtn.style.borderRadius = "6px";
+      okBtn.style.fontWeight = "bold";
+
+      okBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        resolve();
+      };
+
+      content.appendChild(title);
+      content.appendChild(text);
+      content.appendChild(okBtn);
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
+    });
+  };
+
+  // Регистрация глобальной функции сброса победы для 100%-ной надежности
+  window.removeWinnerAction = async (receiptOrBtn, possibleBtn) => {
+    let receipt;
+    let btn;
+    if (receiptOrBtn instanceof HTMLElement) {
+      btn = receiptOrBtn;
+      receipt = btn.getAttribute("data-receipt");
+    } else {
+      receipt = receiptOrBtn;
+      btn = possibleBtn;
+    }
+
+    if (!receipt) {
+      console.error("No receipt found or passed to removeWinnerAction");
+      return;
+    }
+
+    const confirmed = await window.showConfirmDialog(`Вы действительно хотите аннулировать победу по чеку № ${receipt}?`);
+    if (!confirmed) {
+      return;
+    }
+    
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Удаление...";
+    }
+    
+    try {
+      if (useMock) {
+        // Имитация в Демо-режиме
+        await new Promise((r) => setTimeout(r, 500));
+        
+        // Удалить из winners
+        winners = winners.filter(w => String(w.receipt).trim() !== String(receipt).trim());
+        
+        // Сбросить статус won у оригинального участника
+        const p = participants.find(part => String(part.receipt).trim() === String(receipt).trim());
+        if (p) {
+          p.won = false;
+        }
+        
+        await window.showAlertDialog("Победитель успешно удален (демо-режим).", true);
+        await loadAdminData();
+      } else {
+        // Реальный режим
+        const payload = { action: "removeWinner", token: adminToken, receipt: receipt };
+        const res = await fetch(config.googleScriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+          await window.showAlertDialog(json.message || "Победитель успешно удален.", true);
+          await loadAdminData();
+        } else {
+          await window.showAlertDialog("Ошибка: " + (json.message || "Не удалось удалить победителя"), false);
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Сбросить победу";
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error removing winner:", err);
+      await window.showAlertDialog("Произошла ошибка при связи с сервером.", false);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Сбросить победу";
+      }
+    }
+  };
+
+  // Делегирование клика для 100%-ной отказоустойчивости в таблице участников
+  const participantsBody = document.getElementById("participantsBody");
+  if (participantsBody) {
+    participantsBody.addEventListener("click", (e) => {
+      const btn = e.target.closest(".remove-winner-btn");
+      if (btn) {
+        // Быстрый вызов нашей надежной функции
+        window.removeWinnerAction(btn);
+      }
     });
   }
 
@@ -538,9 +796,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const query = e.target.value.toLowerCase().trim();
     const filtered = participants.filter(
       (p) =>
-        p.receipt.toLowerCase().includes(query) ||
-        p.name.toLowerCase().includes(query) ||
-        p.phone.toLowerCase().includes(query),
+        String(p.receipt || "").toLowerCase().includes(query) ||
+        String(p.name || "").toLowerCase().includes(query) ||
+        String(p.phone || "").toLowerCase().includes(query),
     );
     document.getElementById("participantsBody").innerHTML = "";
     renderParticipants(filtered);
@@ -552,6 +810,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     .addEventListener("click", async () => {
       const msg = document.getElementById("drawMessage");
       const btn = document.getElementById("drawWinnerBtn");
+
+      function showWinnerMessage(winner) {
+        msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${winner.name} (Чек: ${winner.receipt})</strong><br>Телефон: ${winner.phone}`;
+        msg.className = "message success";
+        msg.style.opacity = "1";
+        msg.style.transition = "";
+
+        // Автоматическое скрытие через 10 секунд
+        if (window.winnerHideTimeout) {
+          clearTimeout(window.winnerHideTimeout);
+        }
+        window.winnerHideTimeout = setTimeout(() => {
+          msg.style.transition = "opacity 1s ease";
+          msg.style.opacity = "0";
+          
+          window.winnerHideTimeout = setTimeout(() => {
+            msg.textContent = "";
+            msg.className = "message";
+            msg.style.opacity = "";
+            msg.style.transition = "";
+          }, 1000);
+        }, 10000);
+      }
 
       if (!useMock) {
         btn.disabled = true;
@@ -571,8 +852,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             msg.className = "message error";
           } else {
             const winner = responseData.winner;
-            msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${winner.name} (Чек: ${winner.receipt})</strong><br>Телефон: ${winner.phone}`;
-            msg.className = "message success";
+            showWinnerMessage(winner);
 
             // Обновляем списки
             await loadAdminData();
@@ -632,8 +912,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               чтобы сохранить запись в лист "Победители".
             */
 
-        msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${winner.name} (Чек: ${winner.receipt})</strong><br>Телефон: ${winner.phone}`;
-        msg.className = "message success";
+        showWinnerMessage(winner);
         btn.disabled = false;
 
         // Обновляем статистику

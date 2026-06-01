@@ -105,7 +105,6 @@ function doPost(e) {
     }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    setup();
 
     // Проверка логина и пароля администратора
     if (data.action === "login") {
@@ -145,6 +144,17 @@ function doPost(e) {
         ).setMimeType(ContentService.MimeType.JSON);
       }
 
+      const name = String(data.name).trim();
+      // Ограничение длины имени до 100 символов
+      if (name.length < 2 || name.length > 100) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Имя должно быть длиной от 2 до 100 символов",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
       const receipt = String(data.receipt).trim();
 
       // Ровно 12 цифр
@@ -167,46 +177,78 @@ function doPost(e) {
         ).setMimeType(ContentService.MimeType.JSON);
       }
 
-      const phone = String(data.phone).trim();
-      if (!/^\+?[0-9]{8,15}$/.test(phone)) {
+      // Нормализация номера телефона (удаляем +373 и 373, а также любые не-цифры)
+      const phoneInput = String(data.phone).trim();
+      let normalizedPhone = phoneInput.replace(/\D/g, "");
+      if (normalizedPhone.indexOf("373") === 0) {
+        normalizedPhone = normalizedPhone.substring(3);
+      }
+
+      // Проверка формата телефона: ровно 8 цифр
+      if (!/^\d{8}$/.test(normalizedPhone)) {
         return ContentService.createTextOutput(
           JSON.stringify({
             success: false,
-            message: "Некорректный номер телефона",
+            message: "Некорректный номер телефона (должен состоять ровно из 8 цифр)",
           }),
         ).setMimeType(ContentService.MimeType.JSON);
       }
 
-      const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
-
-      const values = sheet.getDataRange().getValues();
-      for (let i = 1; i < values.length; i++) {
-        if (String(values[i][0]).trim() === String(data.receipt).trim()) {
-          return ContentService.createTextOutput(
-            JSON.stringify({
-              success: false,
-              message: "Такой номер чека уже зарегистрирован",
-            }),
-          ).setMimeType(ContentService.MimeType.JSON);
-        }
+      const lock = LockService.getScriptLock();
+      try {
+        // Блокируем доступ на 30 секунд для предотвращения гонок и дубликатов
+        lock.waitLock(30000);
+      } catch (e) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Сервер перегружен запросами. Пожалуйста, попробуйте еще раз.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
       }
 
-      const todayDate = Utilities.formatDate(
-        new Date(),
-        Session.getScriptTimeZone(),
-        "yyyy-MM-dd HH:mm:ss",
-      );
-      sheet.appendRow([
-        "'" + data.receipt,
-        data.name,
-        "'" + data.phone,
-        todayDate,
-        "",
-      ]);
+      try {
+        const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        if (!sheet) {
+          // Если по какой-то причине листа нет, запустим setup
+          setup();
+        }
+        
+        const activeSheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const lastRow = activeSheet.getLastRow();
+        if (lastRow >= 2) {
+          // Оптимизация поиска дубликатов: читаем только колонку чеков и надежно сравниваем
+          const receiptsRange = activeSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+          const receiptSet = new Set(receiptsRange.map(row => cleanReceipt(row[0])));
+          if (receiptSet.has(cleanReceipt(receipt))) {
+            return ContentService.createTextOutput(
+              JSON.stringify({
+                success: false,
+                message: "Такой номер чека уже зарегистрирован",
+              }),
+            ).setMimeType(ContentService.MimeType.JSON);
+          }
+        }
 
-      return ContentService.createTextOutput(
-        JSON.stringify({ success: true, message: "Успешно зарегистрировано" }),
-      ).setMimeType(ContentService.MimeType.JSON);
+        const todayDate = Utilities.formatDate(
+          new Date(),
+          Session.getScriptTimeZone(),
+          "yyyy-MM-dd HH:mm:ss",
+        );
+        activeSheet.appendRow([
+          "'" + receipt,
+          name,
+          "'" + normalizedPhone,
+          todayDate,
+          "",
+        ]);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: true, message: "Успешно зарегистрировано" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     if (data.action === "drawWinner") {
@@ -218,55 +260,131 @@ function doPost(e) {
         ).setMimeType(ContentService.MimeType.JSON);
       }
 
-      const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
-      const winSheet = ss.getSheetByName(SHEET_WINNERS);
-      const values = sheet.getDataRange().getValues();
-
-      let eligible = [];
-      for (let i = 1; i < values.length; i++) {
-        if (values[i][4] !== "Победитель") {
-          eligible.push({ rowIndex: i + 1, data: values[i] });
-        }
-      }
-
-      if (eligible.length === 0) {
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+      } catch (e) {
         return ContentService.createTextOutput(
-          JSON.stringify({
-            success: false,
-            message: "Нет доступных участников для розыгрыша",
-          }),
+          JSON.stringify({ success: false, message: "Сервер занят. Попробуйте розыгрыш снова." }),
         ).setMimeType(ContentService.MimeType.JSON);
       }
 
-      const winnerObj = eligible[Math.floor(Math.random() * eligible.length)];
-      const winnerData = winnerObj.data;
+      try {
+        const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const winSheet = ss.getSheetByName(SHEET_WINNERS);
+        if (!sheet || !winSheet) {
+          setup();
+        }
+        const activeSheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const activeWinSheet = ss.getSheetByName(SHEET_WINNERS);
 
-      // Обновляем статус
-      sheet.getRange(winnerObj.rowIndex, 5).setValue("Победитель");
+        const values = activeSheet.getDataRange().getValues();
 
-      const drawDate = Utilities.formatDate(
-        new Date(),
-        Session.getScriptTimeZone(),
-        "yyyy-MM-dd HH:mm:ss",
-      );
-      winSheet.appendRow([
-        "'" + winnerData[0],
-        winnerData[1],
-        "'" + winnerData[2],
-        drawDate,
-      ]);
+        let eligible = [];
+        for (let i = 1; i < values.length; i++) {
+          if (values[i][4] !== "Победитель") {
+            eligible.push({ rowIndex: i + 1, data: values[i] });
+          }
+        }
 
-      return ContentService.createTextOutput(
-        JSON.stringify({
-          success: true,
-          message: "Победитель выбран",
-          winner: {
-            receipt: winnerData[0],
-            name: winnerData[1],
-            phone: winnerData[2],
-          },
-        }),
-      ).setMimeType(ContentService.MimeType.JSON);
+        if (eligible.length === 0) {
+          return ContentService.createTextOutput(
+            JSON.stringify({
+              success: false,
+              message: "Нет доступных участников для розыгрыша",
+            }),
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        const winnerObj = eligible[Math.floor(Math.random() * eligible.length)];
+        const winnerData = winnerObj.data;
+
+        // Обновляем статус
+        activeSheet.getRange(winnerObj.rowIndex, 5).setValue("Победитель");
+
+        const drawDate = Utilities.formatDate(
+          new Date(),
+          Session.getScriptTimeZone(),
+          "yyyy-MM-dd HH:mm:ss",
+        );
+        activeWinSheet.appendRow([
+          "'" + winnerData[0],
+          winnerData[1],
+          "'" + winnerData[2],
+          drawDate,
+        ]);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Победитель выбран",
+            winner: {
+              receipt: winnerData[0],
+              name: winnerData[1],
+              phone: winnerData[2],
+            },
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    if (data.action === "removeWinner") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      if (!token || cache.get("auth_" + token) !== "valid") {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const receiptToRemove = String(data.receipt).trim();
+
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+      } catch (e) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Сервер занят. Попробуйте удалить победителя снова." }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const winSheet = ss.getSheetByName(SHEET_WINNERS);
+
+        const targetClean = cleanReceipt(receiptToRemove);
+
+        // Удаляем из листа "Победители"
+        if (winSheet) {
+          const winData = winSheet.getDataRange().getValues();
+          for (let i = winData.length - 1; i >= 1; i--) {
+            if (cleanReceipt(winData[i][0]) === targetClean) {
+              winSheet.deleteRow(i + 1);
+            }
+          }
+        }
+
+        // Снимаем статус "Победитель" у участника
+        if (sheet) {
+          const values = sheet.getDataRange().getValues();
+          for (let i = 1; i < values.length; i++) {
+            if (cleanReceipt(values[i][0]) === targetClean) {
+              sheet.getRange(i + 1, 5).setValue("");
+            }
+          }
+        }
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Победитель успешно удален из списка и статус участника сброшен",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     return ContentService.createTextOutput(
@@ -280,4 +398,17 @@ function doPost(e) {
       JSON.stringify({ success: false, message: err.toString() }),
     ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Вспомогательная функция для надежного сравнения номеров чеков (нормализует строки, удаляя лидирующие нули и лишние детали)
+function cleanReceipt(r) {
+  let s = String(r).trim().replace(/^'/, '');
+  if (s.endsWith('.0')) {
+    s = s.substring(0, s.length - 2);
+  }
+  // Удаляем лидирующие нули для сравнения числового значения чеков
+  if (/^\d+$/.test(s)) {
+    s = s.replace(/^0+/, '');
+  }
+  return s;
 }
