@@ -566,7 +566,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td>
                   ${p.won ? `
                     <span style="color:#2ecc71;font-weight:bold;margin-right:10px;">Победитель</span>
-                    <button class="btn remove-winner-btn" data-receipt="${p.receipt}" onclick="window.removeWinnerAction(this)" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
+                    <button class="btn remove-winner-btn" data-receipt="${p.receipt}" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
                   ` : `<span style="color:#999;font-size:0.9rem;">Участник</span>`}
                 </td>
             `;
@@ -785,6 +785,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     participantsBody.addEventListener("click", (e) => {
       const btn = e.target.closest(".remove-winner-btn");
       if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
         // Быстрый вызов нашей надежной функции
         window.removeWinnerAction(btn);
       }
