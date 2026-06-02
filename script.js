@@ -30,19 +30,74 @@ document.addEventListener("DOMContentLoaded", async () => {
   const promoForm = document.getElementById("promoForm");
   const loginForm = document.getElementById("loginForm");
 
+  let useMock = false;
+
+  // Вспомогательная функция загрузки динамических настроек
+  async function loadSettings() {
+    if (useMock) {
+      const saved = localStorage.getItem("lottery_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          config.startDate = parsed.startDate;
+          config.endDate = parsed.endDate;
+          config.drawDate = parsed.drawDate;
+          config.registrationEnabled = parsed.registrationEnabled === "true" || parsed.registrationEnabled === true;
+        } catch (e) {
+          console.error("Ошибка при чтении локальных настроек:", e);
+        }
+      }
+      return;
+    }
+
+    try {
+      const url = new URL(config.googleScriptUrl);
+      url.searchParams.append("action", "getSettings");
+      const res = await fetch(url.toString());
+      const data = await res.json();
+      if (data.success && data.settings) {
+        config.startDate = data.settings.startDate;
+        config.endDate = data.settings.endDate;
+        config.drawDate = data.settings.drawDate;
+        config.registrationEnabled = data.settings.registrationEnabled === "true" || data.settings.registrationEnabled === true;
+      }
+    } catch (err) {
+      console.warn("Ошибка при получении настроек с сервера. Используем локальный конфигурационный файл.", err);
+    }
+  }
+
   // 1. Инициализация (Загрузка конфигурации)
   try {
     const res = await fetch("config.json?v=" + Date.now());
     config = await res.json();
+    useMock = !config.googleScriptUrl || config.googleScriptUrl.trim() === "";
+    
+    // Загружаем динамические настройки из Google Sheets / LocalStorage
+    await loadSettings();
+    
     checkRegistrationPeriod();
   } catch (err) {
     console.error("ОШИБКА: Не удалось загрузить config.json", err);
+    useMock = true; // Fallback на демо-режим при явной ошибке
   }
 
   function checkRegistrationPeriod() {
     const btn = document.getElementById("submitBtn");
     const msg = document.getElementById("formMessage");
     if (!btn) return true;
+
+    // Принудительное отключение
+    if (config.registrationEnabled === false) {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      btn.style.cursor = "not-allowed";
+      btn.textContent = "Регистрация закрыта";
+      if (msg) {
+        msg.textContent = "Регистрация временно приостановлена администратором.";
+        msg.className = "message error";
+      }
+      return false;
+    }
 
     const now = new Date();
 
@@ -61,8 +116,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    if (config.endDate || config.drawDate) {
-      const end = new Date(config.endDate || config.drawDate);
+    if (config.endDate) {
+      const end = new Date(config.endDate);
       if (now > end) {
         btn.disabled = true;
         btn.style.opacity = "0.6";
@@ -76,18 +131,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+    btn.textContent = "Зарегистрировать чек";
+    if (msg) {
+      msg.textContent = "";
+      msg.className = "message";
+    }
     return true;
   }
 
   // ---- ЛОГИКА ОТСЧЕТА ВРЕМЕНИ ----
   let countdownInterval;
-  const drawDate = config.drawDate
-    ? new Date(config.drawDate).getTime()
-    : new Date(Date.now() + 86400000).getTime(); // fallback 1 день
+
+  function getTargetDrawTime() {
+    return config.drawDate
+      ? new Date(config.drawDate).getTime()
+      : new Date(Date.now() + 86400000).getTime(); // fallback 1 день
+  }
 
   function updateCountdown() {
     const now = new Date().getTime();
-    const distance = drawDate - now;
+    const distance = getTargetDrawTime() - now;
 
     const cdDaysElem = document.getElementById("cdDays");
     const cdHoursElem = document.getElementById("cdHours");
@@ -98,7 +164,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const countdownElem = document.getElementById("countdown");
 
     if (distance < 0) {
-      clearInterval(countdownInterval);
       if (cdDaysElem) cdDaysElem.innerText = "00";
       if (cdHoursElem) cdHoursElem.innerText = "00";
       if (cdMinutesElem) cdMinutesElem.innerText = "00";
@@ -129,10 +194,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   updateCountdown();
   countdownInterval = setInterval(updateCountdown, 1000);
-
-  // Демо-режим, если Google Apps Script URL не добавлен
-  const useMock =
-    !config.googleScriptUrl || config.googleScriptUrl.trim() === "";
 
   if (useMock) {
     console.warn(
@@ -362,7 +423,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function checkWinnersVisibility() {
     // Условие отображения секции победителей
-    const timeIsUp = new Date().getTime() > drawDate;
+    const timeIsUp = new Date().getTime() > getTargetDrawTime();
     const hasWinners = currentWinnersCount > 0;
 
     const winnersSection = document.querySelector(".winners-section");
@@ -374,6 +435,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         winnersSection.style.display = "none";
       }
     }
+  }
+
+  // Функция экранирования HTML для предотвращения XSS
+  function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   // Форматирование даты
@@ -447,9 +519,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "***";
 
         card.innerHTML = `
-                    <h4>${w.name}</h4>
-                    <div class="receipt">Чек: ${masked}</div>
-                    <div class="date"><small>Дата розыгрыша: ${formatDate(w.date)}</small></div>
+                    <h4>${escapeHTML(w.name)}</h4>
+                    <div class="receipt">Чек: ${escapeHTML(masked)}</div>
+                    <div class="date"><small>Дата розыгрыша: ${escapeHTML(formatDate(w.date))}</small></div>
                 `;
         list.appendChild(card);
       });
@@ -481,16 +553,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const url = new URL(config.googleScriptUrl);
-      url.searchParams.append("action", "participants");
-      if (adminToken) {
-        url.searchParams.append("token", adminToken);
-      }
-
       // Выгружаем победителей и участников параллельно для ускорения входа
       const [_, res] = await Promise.all([
         loadWinners().catch(err => console.error("Ошибка загрузки победителей:", err)),
-        fetch(url.toString()).then(r => r.json()).catch(err => {
+        fetch(config.googleScriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "participants", token: adminToken }),
+        }).then(r => r.json()).catch(err => {
           console.error("Ошибка загрузки участников:", err);
           return { success: false };
         })
@@ -518,8 +588,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const tbody = document.getElementById("participantsBody");
     tbody.innerHTML = ""; // Очищаем таблицу
 
-    // Сортировка: победители всегда в самом верху списка
-    list.sort((a, b) => {
+    // Сортировка: победители всегда в самом верху списка (без порчи исходного массива)
+    const sorted = [...list].sort((a, b) => {
       const aWon = !!a.won;
       const bWon = !!b.won;
       if (aWon && !bWon) return -1;
@@ -528,22 +598,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Берем первые PAGE_SIZE (20)
-    let toShow = list.slice(0, PAGE_SIZE);
+    let toShow = sorted.slice(0, PAGE_SIZE);
     displayedParticipants = toShow.length;
 
     appendRows(toShow);
 
     // Если элементов больше, показываем кнопку дозагрузки
-    if (list.length > displayedParticipants) {
+    if (sorted.length > displayedParticipants) {
       loadMoreBtn.classList.remove("hidden");
       loadMoreBtn.onclick = () => {
-        let nextBatch = list.slice(
+        let nextBatch = sorted.slice(
           displayedParticipants,
           displayedParticipants + PAGE_SIZE,
         );
         appendRows(nextBatch);
         displayedParticipants += nextBatch.length;
-        if (displayedParticipants >= list.length) {
+        if (displayedParticipants >= sorted.length) {
           loadMoreBtn.classList.add("hidden");
         }
       };
@@ -559,14 +629,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       if (p.won) tr.style.backgroundColor = "rgba(46, 204, 113, 0.05)"; // Подсветка победителя
       tr.innerHTML = `
-                <td><strong>${p.receipt}</strong></td>
-                <td>${p.name}</td>
-                <td>${p.phone}</td>
-                <td>${formatDate(p.date)}</td>
+                <td><strong>${escapeHTML(p.receipt)}</strong></td>
+                <td>${escapeHTML(p.name)}</td>
+                <td>${escapeHTML(p.phone)}</td>
+                <td>${escapeHTML(formatDate(p.date))}</td>
                 <td>
                   ${p.won ? `
                     <span style="color:#2ecc71;font-weight:bold;margin-right:10px;">Победитель</span>
-                    <button class="btn remove-winner-btn" data-receipt="${p.receipt}" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
+                    <button class="btn remove-winner-btn" data-receipt="${escapeHTML(p.receipt)}" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
                   ` : `<span style="color:#999;font-size:0.9rem;">Участник</span>`}
                 </td>
             `;
@@ -814,7 +884,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const btn = document.getElementById("drawWinnerBtn");
 
       function showWinnerMessage(winner) {
-        msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${winner.name} (Чек: ${winner.receipt})</strong><br>Телефон: ${winner.phone}`;
+        msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${escapeHTML(winner.name)} (Чек: ${escapeHTML(winner.receipt)})</strong><br>Телефон: ${escapeHTML(winner.phone)}`;
         msg.className = "message success";
         msg.style.opacity = "1";
         msg.style.transition = "";
@@ -931,6 +1001,217 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
     });
+
+  // ---- ЛОГИКА ВКЛАДОК ПАНЕЛИ АДМИНИСТРАТОРА ----
+  const tabParticipants = document.getElementById("tabParticipants");
+  const tabSettings = document.getElementById("tabSettings");
+  const participantsTabContent = document.getElementById("participantsTabContent");
+  const settingsTabContent = document.getElementById("settingsTabContent");
+
+  function fillSettingsInputs() {
+    const startInput = document.getElementById("adminStartDate");
+    const endInput = document.getElementById("adminEndDate");
+    const drawInput = document.getElementById("adminDrawDate");
+
+    if (startInput && config.startDate) {
+      startInput.value = formatDateTimeLocal(config.startDate);
+    }
+    if (endInput && config.endDate) {
+      endInput.value = formatDateTimeLocal(config.endDate);
+    }
+    if (drawInput && config.drawDate) {
+      drawInput.value = formatDateTimeLocal(config.drawDate);
+    }
+
+    updateRegistrationStatusUI();
+  }
+
+  function updateRegistrationStatusUI() {
+    const statusText = document.getElementById("adminRegStatusText");
+    const toggleBtn = document.getElementById("toggleRegBtn");
+    if (!statusText || !toggleBtn) return;
+
+    const isEnabled = config.registrationEnabled !== false;
+    if (isEnabled) {
+      statusText.textContent = "🟢 Открыта";
+      statusText.style.backgroundColor = "rgba(46, 204, 113, 0.2)";
+      statusText.style.color = "var(--primary, #2ecc71)";
+      toggleBtn.textContent = "🔴 Закрыть регистрацию";
+      toggleBtn.className = "btn btn-outline";
+      toggleBtn.style.color = "var(--error, #cf6679)";
+      toggleBtn.style.borderColor = "var(--error, #cf6679)";
+    } else {
+      statusText.textContent = "🔴 Закрыта";
+      statusText.style.backgroundColor = "rgba(207, 102, 121, 0.2)";
+      statusText.style.color = "var(--error, #cf6679)";
+      toggleBtn.textContent = "🟢 Открыть регистрацию";
+      toggleBtn.className = "btn btn-outline";
+      toggleBtn.style.color = "var(--primary, #00a658)";
+      toggleBtn.style.borderColor = "var(--primary, #00a658)";
+    }
+  }
+
+  function formatDateTimeLocal(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const pad = (num) => String(num).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function parseUserDate(str) {
+    if (!str) return null;
+    str = str.trim();
+    
+    // Check if it's already in YYYY-MM-DDTHH:mm:ss format
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(str)) {
+      const d = new Date(str.replace(' ', 'T'));
+      if (!isNaN(d.getTime())) return str.replace(' ', 'T');
+    }
+    
+    // Check for DD.MM.YYYY HH:mm:ss or DD.MM.YYYY HH:mm or DD.MM.YYYY
+    let match = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const year = parseInt(match[3], 10);
+      const hour = match[4] ? parseInt(match[4], 10) : 0;
+      const min = match[5] ? parseInt(match[5], 10) : 0;
+      const sec = match[6] ? parseInt(match[6], 10) : 0;
+      const date = new Date(year, month, day, hour, min, sec);
+      if (!isNaN(date.getTime())) {
+        const pad = (num) => String(num).padStart(2, '0');
+        return `${year}-${pad(month + 1)}-${pad(day)}T${pad(hour)}:${pad(min)}:${pad(sec)}`;
+      }
+    }
+    
+    const fallback = new Date(str);
+    if (!isNaN(fallback.getTime())) {
+      return fallback.toISOString();
+    }
+    return null;
+  }
+
+  if (tabParticipants && tabSettings) {
+    tabParticipants.addEventListener("click", () => {
+      tabParticipants.classList.add("active");
+      tabParticipants.style.color = "var(--primary)";
+      tabParticipants.style.borderBottom = "3px solid var(--primary)";
+      
+      tabSettings.classList.remove("active");
+      tabSettings.style.color = "var(--text-muted)";
+      tabSettings.style.borderBottom = "none";
+
+      participantsTabContent.classList.remove("hidden");
+      settingsTabContent.classList.add("hidden");
+    });
+
+    tabSettings.addEventListener("click", () => {
+      tabSettings.classList.add("active");
+      tabSettings.style.color = "var(--primary)";
+      tabSettings.style.borderBottom = "3px solid var(--primary)";
+      
+      tabParticipants.classList.remove("active");
+      tabParticipants.style.color = "var(--text-muted)";
+      tabParticipants.style.borderBottom = "none";
+
+      participantsTabContent.classList.add("hidden");
+      settingsTabContent.classList.remove("hidden");
+
+      fillSettingsInputs();
+    });
+  }
+
+  // Принудительное изменение статуса кнопкой
+  const toggleRegBtn = document.getElementById("toggleRegBtn");
+  if (toggleRegBtn) {
+    toggleRegBtn.addEventListener("click", () => {
+      config.registrationEnabled = config.registrationEnabled === false ? true : false;
+      updateRegistrationStatusUI();
+    });
+  }
+
+  // Сохранение настроек
+  const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener("click", async () => {
+      const msg = document.getElementById("settingsMessage");
+      const startVal = document.getElementById("adminStartDate").value;
+      const endVal = document.getElementById("adminEndDate").value;
+      const drawVal = document.getElementById("adminDrawDate").value;
+
+      if (!startVal || !endVal || !drawVal) {
+        msg.textContent = "Пожалуйста, заполните все обязательные поля.";
+        msg.className = "message error";
+        return;
+      }
+
+      const parsedStart = parseUserDate(startVal);
+      const parsedEnd = parseUserDate(endVal);
+      const parsedDraw = parseUserDate(drawVal);
+
+      if (!parsedStart || !parsedEnd || !parsedDraw) {
+        msg.textContent = "Неверный формат даты. Пожалуйста, используйте формат: ДД.ММ.ГГГГ ЧЧ:ММ (например: 30.06.2026 23:59)";
+        msg.className = "message error";
+        return;
+      }
+
+      saveSettingsBtn.disabled = true;
+      saveSettingsBtn.textContent = "Сохранение...";
+      msg.textContent = "";
+      msg.className = "message";
+
+      const newSettings = {
+        startDate: parsedStart,
+        endDate: parsedEnd,
+        drawDate: parsedDraw,
+        registrationEnabled: config.registrationEnabled !== false
+      };
+
+      try {
+        if (useMock) {
+          await new Promise((r) => setTimeout(r, 600));
+          localStorage.setItem("lottery_settings", JSON.stringify(newSettings));
+          config = { ...config, ...newSettings };
+          msg.textContent = "Настройки успешно сохранены (демо-режим).";
+          msg.className = "message success";
+          checkRegistrationPeriod();
+          fillSettingsInputs(); // Re-format beautifully
+        } else {
+          const payload = {
+            action: "saveSettings",
+            token: adminToken,
+            ...newSettings
+          };
+
+          const res = await fetch(config.googleScriptUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
+
+          const json = await res.json();
+          if (json.success) {
+            config = { ...config, ...newSettings };
+            msg.textContent = json.message || "Настройки успешно сохранены.";
+            msg.className = "message success";
+            checkRegistrationPeriod();
+            fillSettingsInputs(); // Re-format beautifully
+          } else {
+            msg.textContent = json.message || "Не удалось сохранить настройки.";
+            msg.className = "message error";
+          }
+        }
+      } catch (err) {
+        console.error("Ошибка при сохранении настроек:", err);
+        msg.textContent = "Произошла ошибка связи с сервером.";
+        msg.className = "message error";
+      } finally {
+        saveSettingsBtn.disabled = false;
+        saveSettingsBtn.textContent = "Сохранить настройки";
+      }
+    });
+  }
 
   // Первоначальный вызов отрисовки открытой части
   loadWinners();

@@ -9,6 +9,8 @@
 
 const SHEET_PARTICIPANTS = "Участники";
 const SHEET_WINNERS = "Победители";
+const SHEET_LOGS = "Логи";
+const SHEET_SETTINGS = "Настройки";
 
 // Данные администратора рекомендуется хранить в Script Properties (PropertiesService)
 // Для первоначальной установки можно задать их здесь или в настройках скрипта.
@@ -26,12 +28,52 @@ function setup() {
     let s = ss.insertSheet(SHEET_WINNERS);
     s.appendRow(["Номер чека", "Имя", "Телефон", "Дата розыгрыша"]);
   }
+  if (!ss.getSheetByName(SHEET_LOGS)) {
+    let s = ss.insertSheet(SHEET_LOGS);
+    s.appendRow(["Дата", "Действие", "Чек", "Админ"]);
+  }
+  if (!ss.getSheetByName(SHEET_SETTINGS)) {
+    let s = ss.insertSheet(SHEET_SETTINGS);
+    s.appendRow(["Ключ", "Значение"]);
+    s.appendRow(["startDate", "2026-05-22T00:00:00"]);
+    s.appendRow(["endDate", "2026-06-10T23:50:59"]);
+    s.appendRow(["drawDate", "2026-07-02T00:00:00"]);
+    s.appendRow(["registrationEnabled", "true"]);
+  }
+}
+
+// Вспомогательная функция для чтения настроек
+function getSettings(ss) {
+  const sheet = ss.getSheetByName(SHEET_SETTINGS);
+  const settings = {
+    startDate: "2026-05-22T00:00:00",
+    endDate: "2026-06-10T23:50:59",
+    drawDate: "2026-07-02T00:00:00",
+    registrationEnabled: "true"
+  };
+  if (!sheet) return settings;
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const key = String(values[i][0]).trim();
+    const val = String(values[i][1]).trim();
+    if (key) {
+      settings[key] = val;
+    }
+  }
+  return settings;
 }
 
 // Принимает GET-запросы
 function doGet(e) {
   const action = e.parameter.action;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  if (action === "getSettings") {
+    const settingsObj = getSettings(ss);
+    return ContentService.createTextOutput(
+      JSON.stringify({ success: true, settings: settingsObj }),
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 
   if (action === "winners") {
     const sheet = ss.getSheetByName(SHEET_WINNERS);
@@ -60,7 +102,7 @@ function doGet(e) {
   if (action === "participants") {
     const token = e.parameter.token;
     const cache = CacheService.getScriptCache();
-    if (!token || cache.get("auth_" + token) !== "valid") {
+    if (!token || !cache.get("auth_" + token)) {
       return ContentService.createTextOutput(
         JSON.stringify({ success: false, message: "Необходима авторизация" }),
       ).setMimeType(ContentService.MimeType.JSON);
@@ -108,15 +150,32 @@ function doPost(e) {
 
     // Проверка логина и пароля администратора
     if (data.action === "login") {
+      const cache = CacheService.getScriptCache();
+      const loginKey = "login_attempts_" + String(data.login || "unknown");
+      const attempts = parseInt(cache.get(loginKey) || "0", 10);
+
+      if (attempts >= 5) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Слишком много попыток входа. Попробуйте через 15 минут.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
       const p = PropertiesService.getScriptProperties();
-      const adminLogin = p.getProperty("ADMIN_LOGIN") || "admin";
-      const adminPass = p.getProperty("ADMIN_PASSWORD") || "password123";
+      const adminLogin = p.getProperty("ADMIN_LOGIN");
+      const adminPass = p.getProperty("ADMIN_PASSWORD");
+
+      if (!adminLogin || !adminPass) {
+        throw new Error("ADMIN_LOGIN или ADMIN_PASSWORD не настроены в Script Properties");
+      }
 
       if (data.login === adminLogin && data.password === adminPass) {
         const token = Utilities.getUuid();
-        const cache = CacheService.getScriptCache();
-        // Сохраняем токен в кэш на 6 часов (максимум для CacheService - 21600 секунд)
-        cache.put("auth_" + token, "valid", 21600);
+        // Сохраняем имя администратора в кэш на 6 часов (максимум для CacheService - 21600 секунд)
+        cache.put("auth_" + token, String(data.login), 21600);
+        cache.remove(loginKey);
         return ContentService.createTextOutput(
           JSON.stringify({
             success: true,
@@ -125,6 +184,7 @@ function doPost(e) {
           }),
         ).setMimeType(ContentService.MimeType.JSON);
       } else {
+        cache.put(loginKey, String(attempts + 1), 900); // 15 минут
         return ContentService.createTextOutput(
           JSON.stringify({
             success: false,
@@ -134,7 +194,77 @@ function doPost(e) {
       }
     }
 
+    if (data.action === "participants") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      if (!token || !cache.get("auth_" + token)) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+      if (!sheet)
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: true, participants: [] }),
+        ).setMimeType(ContentService.MimeType.JSON);
+
+      const valData = sheet.getDataRange().getValues();
+      const participantsList = [];
+
+      // Номер чека (0), Имя (1), Телефон (2), Дата (3), Статус (4)
+      for (let i = 1; i < valData.length; i++) {
+        participantsList.push({
+          receipt: valData[i][0],
+          name: valData[i][1],
+          phone: valData[i][2],
+          date: valData[i][3],
+          won: valData[i][4] === "Победитель",
+        });
+      }
+
+      return ContentService.createTextOutput(
+        JSON.stringify({ success: true, participants: participantsList }),
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (data.action === "register") {
+      // Проверка периода регистрации по динамическим настройкам в таблице
+      const settings = getSettings(ss);
+      if (settings.registrationEnabled === "false" || settings.registrationEnabled === false) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Регистрация временно приостановлена администратором",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const now = new Date();
+      if (settings.startDate) {
+        const start = new Date(settings.startDate);
+        if (now < start) {
+          return ContentService.createTextOutput(
+            JSON.stringify({
+              success: false,
+              message: "Регистрация еще не началась",
+            }),
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+
+      if (settings.endDate) {
+        const end = new Date(settings.endDate);
+        if (now > end) {
+          return ContentService.createTextOutput(
+            JSON.stringify({
+              success: false,
+              message: "Регистрация завершена",
+            }),
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+
       if (!data.receipt || !data.name || !data.phone) {
         return ContentService.createTextOutput(
           JSON.stringify({
@@ -254,7 +384,8 @@ function doPost(e) {
     if (data.action === "drawWinner") {
       const token = data.token;
       const cache = CacheService.getScriptCache();
-      if (!token || cache.get("auth_" + token) !== "valid") {
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
         return ContentService.createTextOutput(
           JSON.stringify({ success: false, message: "Необходима авторизация" }),
         ).setMimeType(ContentService.MimeType.JSON);
@@ -296,7 +427,9 @@ function doPost(e) {
           ).setMimeType(ContentService.MimeType.JSON);
         }
 
-        const winnerObj = eligible[Math.floor(Math.random() * eligible.length)];
+        const randomBytes = Utilities.getUuid().replace(/-/g, "");
+        const randomNumber = parseInt(randomBytes.substring(0, 8), 16);
+        const winnerObj = eligible[randomNumber % eligible.length];
         const winnerData = winnerObj.data;
 
         // Обновляем статус
@@ -313,6 +446,9 @@ function doPost(e) {
           "'" + winnerData[2],
           drawDate,
         ]);
+
+        // Логируем действие администратора
+        logAction("DRAW_WINNER", winnerData[0], adminUser);
 
         return ContentService.createTextOutput(
           JSON.stringify({
@@ -333,7 +469,8 @@ function doPost(e) {
     if (data.action === "removeWinner") {
       const token = data.token;
       const cache = CacheService.getScriptCache();
-      if (!token || cache.get("auth_" + token) !== "valid") {
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
         return ContentService.createTextOutput(
           JSON.stringify({ success: false, message: "Необходима авторизация" }),
         ).setMimeType(ContentService.MimeType.JSON);
@@ -376,10 +513,60 @@ function doPost(e) {
           }
         }
 
+        // Логируем действие администратора
+        logAction("REMOVE_WINNER", receiptToRemove, adminUser);
+
         return ContentService.createTextOutput(
           JSON.stringify({
             success: true,
             message: "Победитель успешно удален из списка и статус участника сброшен",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    if (data.action === "saveSettings") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+      } catch (e) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Сервер занят. Попробуйте обновить настройки позже." }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        let sheet = ss.getSheetByName(SHEET_SETTINGS);
+        if (!sheet) {
+          setup();
+          sheet = ss.getSheetByName(SHEET_SETTINGS);
+        }
+
+        sheet.clear();
+        sheet.appendRow(["Ключ", "Значение"]);
+        sheet.appendRow(["startDate", String(data.startDate || "")]);
+        sheet.appendRow(["endDate", String(data.endDate || "")]);
+        sheet.appendRow(["drawDate", String(data.drawDate || "")]);
+        sheet.appendRow(["registrationEnabled", String(data.registrationEnabled !== false)]);
+
+        // Логируем действие администратора в "Логи"
+        logAction("UPDATE_SETTINGS", "start:" + data.startDate + "|end:" + data.endDate + "|draw:" + data.drawDate + "|reg:" + data.registrationEnabled, adminUser);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Настройки успешно сохранены",
           }),
         ).setMimeType(ContentService.MimeType.JSON);
       } finally {
@@ -411,4 +598,29 @@ function cleanReceipt(r) {
     s = s.replace(/^0+/, '');
   }
   return s;
+}
+
+// Вспомогательная функция для логирования действий администратора
+function logAction(actionName, receipt, adminUser) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let logSheet = ss.getSheetByName(SHEET_LOGS);
+    if (!logSheet) {
+      logSheet = ss.insertSheet(SHEET_LOGS);
+      logSheet.appendRow(["Дата", "Действие", "Чек", "Админ"]);
+    }
+    const currentDate = Utilities.formatDate(
+      new Date(),
+      Session.getScriptTimeZone(),
+      "yyyy-MM-dd HH:mm:ss",
+    );
+    logSheet.appendRow([
+      currentDate,
+      actionName,
+      "'" + receipt,
+      adminUser || "unknown",
+    ]);
+  } catch (err) {
+    console.error("Ошибка при записи лога:", err);
+  }
 }

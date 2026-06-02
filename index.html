@@ -104,51 +104,99 @@
     <main id="adminView" class="hidden">
         <div class="container">
             <h2>Панель Администратора</h2>
-            
-            <!-- Статистика -->
-            <div class="admin-stats">
-                <div class="stat-card">
-                    <h4>Участников</h4>
-                    <p id="statTotalParticipants">0</p>
+
+            <!-- Вкладки панели администратора -->
+            <div class="admin-tabs" style="display: flex; gap: 15px; margin-top: 20px; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+                <button id="tabParticipants" class="btn btn-tab active" style="background: none; border: none; color: var(--primary); border-bottom: 3px solid var(--primary); padding: 10px 15px; font-weight: bold; cursor: pointer; font-size: 1.1rem; border-radius: 0; outline: none; font-family: var(--font-heading);">Участники</button>
+                <button id="tabSettings" class="btn btn-tab" style="background: none; border: none; color: var(--text-muted); padding: 10px 15px; font-weight: bold; cursor: pointer; font-size: 1.1rem; border-radius: 0; outline: none; font-family: var(--font-heading);">Настройки акции</button>
+            </div>
+
+            <!-- Вкладка: Участники -->
+            <div id="participantsTabContent">
+                <!-- Статистика -->
+                <div class="admin-stats">
+                    <div class="stat-card">
+                        <h4>Участников</h4>
+                        <p id="statTotalParticipants">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Победителей</h4>
+                        <p id="statTotalWinners">0</p>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h4>Победителей</h4>
-                    <p id="statTotalWinners">0</p>
+
+                <!-- Действия -->
+                <div class="admin-actions">
+                    <button id="drawWinnerBtn" class="btn btn-success">Подвести итоги (выбрать победителя)</button>
+                    <div id="drawMessage" class="message"></div>
+                </div>
+
+                <!-- Поиск -->
+                <div class="admin-search">
+                    <input type="text" id="searchInput" placeholder="Поиск по номеру чека, имени или телефону...">
+                </div>
+
+                <!-- Таблица участников -->
+                <div class="participants-list">
+                    <h3>Зарегистрированные участники</h3>
+                    <div class="table-responsive">
+                        <table id="participantsTable">
+                            <thead>
+                                <tr>
+                                    <th>Номер чека</th>
+                                    <th>Имя</th>
+                                    <th>Телефон</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Статус / Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantsBody">
+                                <!-- Сюда добавляются строки скриптом -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="load-more-container">
+                        <button id="loadMoreBtn" class="btn btn-outline hidden">Показать ещё</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Действия -->
-            <div class="admin-actions">
-                <button id="drawWinnerBtn" class="btn btn-success">Подвести итоги (выбрать победителя)</button>
-                <div id="drawMessage" class="message"></div>
-            </div>
+            <!-- Вкладка: Настройки акции -->
+            <div id="settingsTabContent" class="hidden" style="background: var(--card-bg); padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 40px;">
+                <h3 style="margin-bottom: 25px; color: var(--primary);">⚙️ Управление настройками акции</h3>
 
-            <!-- Поиск -->
-            <div class="admin-search">
-                <input type="text" id="searchInput" placeholder="Поиск по номеру чека, имени или телефону...">
-            </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="adminStartDate" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color);">Дата начала регистрации *</label>
+                        <input type="text" id="adminStartDate" required placeholder="ДД.ММ.ГГГГ ЧЧ:ММ (например: 22.06.2026 00:00)" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); background-color: #121212; color: var(--text-color); font-size: 1rem; outline: none; transition: border-color 0.3s;">
+                    </div>
 
-            <!-- Таблица участников -->
-            <div class="participants-list">
-                <h3>Зарегистрированные участники</h3>
-                <div class="table-responsive">
-                    <table id="participantsTable">
-                        <thead>
-                            <tr>
-                                <th>Номер чека</th>
-                                <th>Имя</th>
-                                <th>Телефон</th>
-                                <th>Дата регистрации</th>
-                                <th>Статус / Действие</th>
-                            </tr>
-                        </thead>
-                        <tbody id="participantsBody">
-                            <!-- Сюда добавляются строки скриптом -->
-                        </tbody>
-                    </table>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="adminEndDate" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color);">Дата окончания регистрации *</label>
+                        <input type="text" id="adminEndDate" required placeholder="ДД.ММ.ГГГГ ЧЧ:ММ (например: 30.06.2026 23:59)" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); background-color: #121212; color: var(--text-color); font-size: 1rem; outline: none; transition: border-color 0.3s;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="adminDrawDate" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color);">Дата проведения розыгрыша *</label>
+                        <input type="text" id="adminDrawDate" required placeholder="ДД.ММ.ГГГГ ЧЧ:ММ (например: 02.07.2026 20:00)" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); background-color: #121212; color: var(--text-color); font-size: 1rem; outline: none; transition: border-color 0.3s;">
+                    </div>
                 </div>
-                <div class="load-more-container">
-                    <button id="loadMoreBtn" class="btn btn-outline hidden">Показать ещё</button>
+
+                <div style="background: #111; padding: 25px; border-radius: var(--radius); border-left: 4px solid var(--primary); margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h4 style="margin-bottom: 8px; color: var(--text-color); font-size: 1.1rem;">Принудительное управление регистрацией</h4>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 550px;">Вы можете вручную закрыть или открыть регистрацию чеков в любой момент, независимо от установленных дат проведения.</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span id="adminRegStatusText" style="font-weight: bold; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem;">Загрузка...</span>
+                        <button id="toggleRegBtn" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.9rem;">Изменить</button>
+                    </div>
+                </div>
+
+                <div id="settingsMessage" class="message" style="margin-bottom: 25px;"></div>
+
+                <div style="text-align: right;">
+                    <button id="saveSettingsBtn" class="btn btn-primary" style="padding: 12px 30px; font-size: 1.05rem;">Сохранить настройки</button>
                 </div>
             </div>
         </div>
