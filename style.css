@@ -66,22 +66,29 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar-brand {
-display: block;
-width: 120px;
-height: 60px;
-margin-left: -320px;
-margin-right: 20px;
-background-image: url("./logo.png");
-background-repeat: no-repeat;
-background-position: left center;
-background-size: contain;
-transition: margin-left 0.3s ease;
+    display: block;
+    width: 120px;
+    height: 60px;
+    margin-left: -45px;
+    margin-right: 20px;
+    background-image: url("./logo.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: contain;
+    transition: margin-left 0.3s ease;
 }
 
-#adminLoginBtn,
-#adminLogoutBtn {
-    transform: translateX(320px);
+@media (min-width: 769px) {
+    .navbar-brand {
+        margin-left: -320px;
+    }
+
+    #adminLoginBtn,
+    #adminLogoutBtn {
+        transform: translateX(320px);
+    }
 }
+
 /* ---- Кнопки ---- */
 .btn {
     padding: 10px 20px;
@@ -546,6 +553,10 @@ tbody tr:hover {
 @media (max-width: 768px) {
     .navbar-brand {
         margin-left: -20px;
+    }
+    #adminLoginBtn,
+    #adminLogoutBtn {
+    transform: none;
     }
     .admin-stats {
         grid-template-columns: 1fr;
