@@ -16,7 +16,7 @@
   <body>
     <!-- Шапка сайта -->
     <header class="header">
-      <div class="container header-content">
+      <div class="header-container header-content">
         <a href="./" class="navbar-brand"></a>
         <button
           id="adminLoginBtn"
@@ -218,100 +218,11 @@
         </div>
       </section>
 
-      <!-- Условия участия -->
-      <section class="rules-section">
-        <div class="container">
-          <div class="rules">
-            <div
-              style="
-                padding-bottom: 20px;
-                margin-bottom: 20px;
-                border-bottom: 1px solid var(--border-color);
-                font-size: 1rem;
-                color: var(--text-color);
-                text-align: center;
-              "
-            >
-              <h3 style="color: var(--primary); margin-bottom: 15px; text-align: center;">Сроки акции</h3>
-              Регистрация чеков: <span id="registrationPeriodText" style="color: var(--primary); font-weight: 700;">с 15 июня по 30 июня 2026 года</span><br />
-              Розыгрыш: <span id="drawDateText" style="color: var(--primary); font-weight: 700;">2 июля 2026 года</span>
-            </div>
-            <div
-              style="
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 20px;
-                text-align: left;
-              "
-            >
-              <div>
-                <h3 style="color: var(--primary); margin-bottom: 10px">
-                  Условия участия:
-                </h3>
-                <ul style="line-height: 1.8; padding-left: 0; list-style-type: none; counter-reset: item;">
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">1</span>
-                    <span>Совершите покупку в любом салоне GO.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">2</span>
-                    <span>
-                      Сумма покупки должна составлять
-                      <strong style="color: var(--primary)">не менее 1500 рублей</strong>.
-                    </span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">3</span>
-                    <span>Сохраните кассовый чек.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">4</span>
-                    <span>Зарегистрируйте чек на сайте акции.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">5</span>
-                    <span>Укажите номер телефона для связи.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">6</span>
-                    <span>Получите шанс выиграть главный приз.</span>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h3 style="color: var(--primary); margin-bottom: 10px">
-                  Дополнительные правила:
-                </h3>
-                <ul
-                  style="
-                    line-height: 1.8;
-                    padding-left: 15px;
-                    font-size: 0.95rem;
-                  "
-                >
-                  <li>Один чек может быть зарегистрирован только один раз.</li>
-                  <li>Каждый чек участвует как отдельная заявка.</li>
-                  <li>
-                    Организатор вправе запросить оригинал чека для подтверждения
-                    выигрыша.
-                  </li>
-                  <li>
-                    Победитель определяется случайным образом среди всех
-                    зарегистрированных участников.
-                  </li>
-                  <li>
-                    Результаты публикуются на сайте акции и/или в социальных
-                    сетях GO.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- Фирменный разделитель -->
+      <div class="brand-divider"></div>
 
       <!-- Форма регистрации чека -->
-      <section class="registration-form">
+      <section class="registration-form" style="background-color: #121212;">
         <div class="container">
           <h2>Форма регистрации</h2>
           <form id="promoForm">
@@ -396,6 +307,101 @@
               Зарегистрировать чек
             </button>
           </form>
+        </div>
+      </section>
+
+      <!-- Фирменный разделитель -->
+      <div class="brand-divider"></div>
+
+      <!-- Условия и Сроки акции -->
+      <section class="rules-section" style="padding: 60px 0; background-color: #0a0a0a;">
+        <div class="container">
+          <div class="rules" style="max-width: 800px; margin: 0 auto; padding: 40px; background-color: #121212; border-radius: 12px; border: 1px solid var(--border-color, #222);">
+            <div
+              style="
+                padding-bottom: 25px;
+                margin-bottom: 25px;
+                border-bottom: 1px solid var(--border-color, #222);
+                font-size: 1.1rem;
+                color: var(--text-color);
+                text-align: center;
+              "
+            >
+              <h3 style="color: var(--primary); margin-bottom: 15px; text-align: center; font-size: 1.6rem;">Сроки акции</h3>
+              Регистрация чеков: <span id="registrationPeriodText" style="color: var(--primary); font-weight: 700;">с 15 июня по 30 июня 2026 года</span><br />
+              Розыгрыш: <span id="drawDateText" style="color: var(--primary); font-weight: 700;">2 июля 2026 года</span>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 30px;
+                text-align: left;
+              "
+            >
+              <div>
+                <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.4rem;">
+                  Условия участия:
+                </h3>
+                <ul style="line-height: 1.8; padding-left: 0; list-style-type: none; counter-reset: item;">
+                  <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">1</span>
+                    <span>Совершите покупку в любом салоне GO.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">2</span>
+                    <span>
+                      Сумма покупки должна составлять<br />
+                      <strong style="color: var(--primary)">не менее 1500 рублей</strong>.
+                    </span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">3</span>
+                    <span>Сохраните кассовый чек.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">4</span>
+                    <span>Зарегистрируйте чек на сайте акции.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">5</span>
+                    <span>Укажите номер телефона для связи.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px; color: var(--primary);">6</span>
+                    <span>Получите шанс выиграть главный приз.</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.4rem;">
+                  Дополнительные правила:
+                </h3>
+                <ul
+                  style="
+                    line-height: 1.8;
+                    padding-left: 15px;
+                    font-size: 0.95rem;
+                  "
+                >
+                  <li style="margin-bottom: 10px;">Один чек может быть зарегистрирован только один раз.</li>
+                  <li style="margin-bottom: 10px;">Каждый чек участвует как отдельная заявка.</li>
+                  <li style="margin-bottom: 10px;">
+                    Организатор вправе запросить оригинал чека для подтверждения
+                    выигрыша.
+                  </li>
+                  <li style="margin-bottom: 10px;">
+                    Победитель определяется случайным образом среди всех
+                    зарегистрированных участников.
+                  </li>
+                  <li>
+                    Результаты публикуются на сайте акции и/или в социальных
+                    сетях GO.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -538,11 +544,14 @@
           </div>
 
           <!-- Действия -->
-          <div class="admin-actions">
+          <div class="admin-actions" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px;">
             <button id="drawWinnerBtn" class="btn btn-success">
               Подвести итоги (выбрать победителя)
             </button>
-            <div id="drawMessage" class="message"></div>
+            <button id="clearAllDataBtn" class="btn btn-danger" style="background-color: var(--error, #e74c3c); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: bold; font-family: var(--font-heading);">
+              Очистить базу данных
+            </button>
+            <div id="drawMessage" class="message" style="width: 100%; margin-top: 15px;"></div>
           </div>
 
           <!-- Поиск -->

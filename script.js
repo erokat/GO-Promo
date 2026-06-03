@@ -987,9 +987,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                       ? `
                     <div style="color:var(--primary);font-weight:bold;margin-bottom:4px;">Победитель ${prizeIndexFormatted ? `(Приз №${prizeIndexFormatted})` : ""}</div>
                     ${prizeStr ? `<div style="font-size:0.85rem;color:#333;margin-bottom:6px;">${escapeHTML(prizeStr)}</div>` : ""}
-                    <button class="btn remove-winner-btn" data-receipt="${escapeHTML(p.receipt)}" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <button class="btn remove-winner-btn" data-receipt="${escapeHTML(p.receipt)}" style="padding: 4px 8px; font-size: 0.8rem; background-color: var(--error, #e74c3c); color: white; border: none; border-radius: 4px; cursor: pointer;">Сбросить победу</button>
+                      <button class="btn delete-participant-btn" data-receipt="${escapeHTML(p.receipt)}" style="padding: 4px 8px; font-size: 0.8rem; background-color: #555; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s;">Удалить</button>
+                    </div>
                   `
-                      : `<span style="color:#999;font-size:0.9rem;">Участник</span>`
+                      : `
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                      <span style="color:#999;font-size:0.9rem;">Участник</span>
+                      <button class="btn delete-participant-btn" data-receipt="${escapeHTML(p.receipt)}" style="padding: 4px 8px; font-size: 0.8rem; background-color: #555; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s;">Удалить</button>
+                    </div>
+                  `
                   }
                 </td>
             `;
@@ -998,7 +1006,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ---- ПОДДЕРЖКА КРАСИВЫХ И БЕЗОПАСНЫХ ДИАЛОГОВ (БЕЗ БЛОКИРУЮЩИХ WINDOW.ALERT/CONFIRM) ----
-  window.showConfirmDialog = (message) => {
+  window.showConfirmDialog = (message, confirmText = "Да, сбросить") => {
     return new Promise((resolve) => {
       const overlay = document.createElement("div");
       overlay.className = "modal";
@@ -1043,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const confirmBtn = document.createElement("button");
       confirmBtn.className = "btn";
-      confirmBtn.textContent = "Да, сбросить";
+      confirmBtn.textContent = confirmText;
       confirmBtn.style.padding = "10px 20px";
       confirmBtn.style.background = "var(--error, #e74c3c)";
       confirmBtn.style.color = "white";
@@ -1221,18 +1229,179 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  window.deleteParticipantAction = async (receiptOrBtn, possibleBtn) => {
+    let receipt;
+    let btn;
+    if (receiptOrBtn instanceof HTMLElement) {
+      btn = receiptOrBtn;
+      receipt = btn.getAttribute("data-receipt");
+    } else {
+      receipt = receiptOrBtn;
+      btn = possibleBtn;
+    }
+
+    if (!receipt) {
+      console.error("No receipt found or passed to deleteParticipantAction");
+      return;
+    }
+
+    const confirmed = await window.showConfirmDialog(
+      `Вы действительно хотите удалить участника по чеку № ${receipt}? Если он является победителем, он также удалится из списка победителей.`,
+      "Да, удалить"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Удаление...";
+    }
+
+    try {
+      if (useMock) {
+        // Имитация в Демо-режиме
+        await new Promise((r) => setTimeout(r, 500));
+
+        participants = participants.filter((p) => cleanR(p.receipt) !== cleanR(receipt));
+        winners = winners.filter((w) => cleanR(w.receipt) !== cleanR(receipt));
+
+        await window.showAlertDialog(
+          "Участник успешно удален (демо-режим).",
+          true,
+        );
+        await loadAdminData();
+      } else {
+        // Реальный режим
+        const payload = {
+          action: "removeParticipant",
+          token: adminToken,
+          receipt: receipt,
+        };
+        const res = await fetch(config.googleScriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+          await window.showAlertDialog(
+            json.message || "Участник успешно удален.",
+            true,
+          );
+          await loadAdminData();
+        } else {
+          await window.showAlertDialog(
+            "Ошибка: " + (json.message || "Не удалось удалить участника"),
+            false,
+          );
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Удалить";
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting participant:", err);
+      await window.showAlertDialog(
+        "Произошла ошибка при связи с сервером.",
+        false,
+      );
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Удалить";
+      }
+    }
+  };
+
+  window.clearAllDataAction = async () => {
+    const confirmed = await window.showConfirmDialog(
+      "ВНИМАНИЕ! Вы собираетесь полностью удалить ВСЕХ зарегистрированных участников и ВСЕХ победителей! Это действие необратимо. Вы действительно хотите очистить все таблицы?",
+      "Да, очистить всё"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const btn = document.getElementById("clearAllDataBtn");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Очистка...";
+    }
+
+    try {
+      if (useMock) {
+        await new Promise((r) => setTimeout(r, 600));
+        participants = [];
+        winners = [];
+        await window.showAlertDialog(
+          "Все зарегистрированные участники и победители были успешно удалены (демо-режим).",
+          true,
+        );
+        await loadAdminData();
+      } else {
+        const payload = {
+          action: "clearAllData",
+          token: adminToken,
+        };
+        const res = await fetch(config.googleScriptUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+          await window.showAlertDialog(
+            json.message || "Все зарегистрированные участники и победители были успешно удалены.",
+            true,
+          );
+          await loadAdminData();
+        } else {
+          await window.showAlertDialog(
+            "Ошибка: " + (json.message || "Не удалось удалить участников и победителей"),
+            false,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Error clearing all data:", err);
+      await window.showAlertDialog(
+        "Произошла ошибка при связи с сервером.",
+        false,
+      );
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Очистить базу данных";
+      }
+    }
+  };
+
   // Делегирование клика для 100%-ной отказоустойчивости в таблице участников
   const participantsBody = document.getElementById("participantsBody");
   if (participantsBody) {
     participantsBody.addEventListener("click", (e) => {
-      const btn = e.target.closest(".remove-winner-btn");
-      if (btn) {
+      const winnerBtn = e.target.closest(".remove-winner-btn");
+      if (winnerBtn) {
         e.preventDefault();
         e.stopPropagation();
-        // Быстрый вызов нашей надежной функции
-        window.removeWinnerAction(btn);
+        window.removeWinnerAction(winnerBtn);
+        return;
+      }
+
+      const deleteBtn = e.target.closest(".delete-participant-btn");
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.deleteParticipantAction(deleteBtn);
       }
     });
+  }
+
+  // Очистка таблиц
+  const clearAllBtn = document.getElementById("clearAllDataBtn");
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", window.clearAllDataAction);
   }
 
   // Поиск по таблице (Живой поиск)
@@ -1263,6 +1432,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     .addEventListener("click", async () => {
       const msg = document.getElementById("drawMessage");
       const btn = document.getElementById("drawWinnerBtn");
+
+      // Сброс и очистка старых таймеров скрытия плашки победителя
+      if (window.winnerHideTimeout) {
+        clearTimeout(window.winnerHideTimeout);
+        window.winnerHideTimeout = null;
+      }
+
+      // Сброс визуального состояния элемента перед началом нового розыгрыша
+      msg.style.opacity = "1";
+      msg.style.transition = "";
+      msg.className = "message info";
+      msg.textContent = "";
 
       function showWinnerMessage(winner) {
         msg.innerHTML = `🎉 Победитель выбран!<br><strong style="font-size:1.2rem">${escapeHTML(winner.name)} (Чек: ${escapeHTML(winner.receipt)})</strong><br>Телефон: ${escapeHTML(winner.phone)}<br><div style="margin-top: 5px; color: var(--primary); font-weight: bold;">${escapeHTML(resolvePrizeName(winner.prize) || "Главный приз")}</div>`;

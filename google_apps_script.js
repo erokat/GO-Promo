@@ -696,6 +696,124 @@ function doPost(e) {
       }
     }
 
+    if (data.action === "removeParticipant") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const receiptToRemove = String(data.receipt).trim();
+
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+      } catch (e) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Сервер занят. Попробуйте удалить участника снова.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const winSheet = ss.getSheetByName(SHEET_WINNERS);
+
+        const targetClean = cleanReceipt(receiptToRemove);
+
+        // Удаляем из листа "Участники"
+        if (sheet) {
+          const values = sheet.getDataRange().getValues();
+          for (let i = values.length - 1; i >= 1; i--) {
+            if (cleanReceipt(values[i][0]) === targetClean) {
+              sheet.deleteRow(i + 1);
+            }
+          }
+        }
+
+        // Удаляем из листа "Победители" (если он победитель)
+        if (winSheet) {
+          const winData = winSheet.getDataRange().getValues();
+          for (let i = winData.length - 1; i >= 1; i--) {
+            if (cleanReceipt(winData[i][0]) === targetClean) {
+              winSheet.deleteRow(i + 1);
+            }
+          }
+        }
+
+        // Логируем действие администратора
+        logAction("REMOVE_PARTICIPANT", receiptToRemove, adminUser);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Участник успешно удален из всех списков",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    if (data.action === "clearAllData") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(30000);
+      } catch (e) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Сервер занят. Попробуйте снова.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        const sheet = ss.getSheetByName(SHEET_PARTICIPANTS);
+        const winSheet = ss.getSheetByName(SHEET_WINNERS);
+
+        if (sheet) {
+          const lastRow = sheet.getLastRow();
+          if (lastRow >= 2) {
+            sheet.deleteRows(2, lastRow - 1);
+          }
+        }
+
+        if (winSheet) {
+          const lastRow = winSheet.getLastRow();
+          if (lastRow >= 2) {
+            winSheet.deleteRows(2, lastRow - 1);
+          }
+        }
+
+        // Логируем действие администратора
+        logAction("CLEAR_ALL_DATA", "all", adminUser);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Все зарегистрированные участники и победители были успешно удалены",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
     if (data.action === "saveSettings") {
       const token = data.token;
       const cache = CacheService.getScriptCache();
