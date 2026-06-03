@@ -40,7 +40,7 @@
       <!-- Баннер акции -->
       <section class="hero">
         <div class="container hero-content">
-          <h1>Отпразднуй день рождения сети салонов GO вместе с нами!</h1>
+          <h1 id="hero-title"><!-- HERO_TITLE_START -->Отпразднуй день рождения сети салонов GO вместе с нами!<!-- HERO_TITLE_END --></h1>
           <p
             id="hero-prize-text"
             style="
@@ -52,7 +52,7 @@
               text-transform: uppercase;
             "
           >
-            Выиграй главный приз — смартфон Xiaomi!
+            <!-- HERO_SUBTITLE_START -->Выиграй главный приз — смартфон Xiaomi!<!-- HERO_SUBTITLE_END -->
           </p>
 
           <!-- Отсчет до розыгрыша -->
@@ -97,6 +97,7 @@
             Много призов — больше шансов на победу!
           </h2>
           <div class="prizes-grid">
+            <!-- PRIZE_1_START -->
             <a
               href="https://go-go.md/products/smartfon-xiaomi-redmi-note-15-pro-plus-5g-8256-simesim-glacier-blue?ysclid=mpx3ampj4b351101638"
               target="_blank"
@@ -107,6 +108,8 @@
                 Смартфон Redmi Note 15 Pro Plus 5G 8/256
               </div>
             </a>
+            <!-- PRIZE_1_END -->
+            <!-- PRIZE_2_START -->
             <a
               href="https://go-go.md/products/matras-turisticheskij-youpin-one-night-automatic-inflatable-leisure-bed-ps1"
               target="_blank"
@@ -114,10 +117,11 @@
             >
               <div class="prize-rank">2</div>
               <div class="prize-text">
-                Матрас туристический Youpin One Night Automatic Inflatable
-                Leisure Bed PS1
+                Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1
               </div>
             </a>
+            <!-- PRIZE_2_END -->
+            <!-- PRIZE_3_START -->
             <a
               href="https://go-go.md/products/videoregistrator-hoco-dv8-with-rear-camera"
               target="_blank"
@@ -128,6 +132,8 @@
                 Видеорегистратор HOCO DV8 with rear camera
               </div>
             </a>
+            <!-- PRIZE_3_END -->
+            <!-- PRIZE_4_START -->
             <a
               href="https://go-go.md/products/naushniki-baseus-bluetooth-bh1-nc-black?ysclid=mpx3di7gle345525462"
               target="_blank"
@@ -138,6 +144,8 @@
                 Наушники Baseus Bluetooth BH1 NC Black
               </div>
             </a>
+            <!-- PRIZE_4_END -->
+            <!-- PRIZE_5_START -->
             <a
               href="https://go-go.md/products/chasy-smart-xiaomi-redmi-watch-5-active-midnight-black?ysclid=mpx3eahvbl435424453"
               target="_blank"
@@ -148,6 +156,8 @@
                 Часы-смарт Xiaomi Redmi Watch 5 Active
               </div>
             </a>
+            <!-- PRIZE_5_END -->
+            <!-- PRIZE_6_START -->
             <a
               href="https://go-go.md/products/kolonka-blackview-bluetooth-aurabass-3-16w-black?ysclid=mpx3etmup1894917485"
               target="_blank"
@@ -158,6 +168,8 @@
                 Колонка Blackview Bluetooth Aurabass 3 16W Black
               </div>
             </a>
+            <!-- PRIZE_6_END -->
+            <!-- PRIZE_7_START -->
             <a
               href="https://go-go.md/products/vesy-napolnye-xiaomi-mi-body-composition-scale-s400?ysclid=mpx3fbfdhj409410102"
               target="_blank"
@@ -168,6 +180,8 @@
                 Весы напольные Xiaomi Mi Body Composition Scale S400
               </div>
             </a>
+            <!-- PRIZE_7_END -->
+            <!-- PRIZE_8_START -->
             <a
               href="https://go-go.md/products/naushniki-xiaomi-bluetooth-redmi-buds-6-play-black?ysclid=mpx3fprpsz971563198"
               target="_blank"
@@ -178,6 +192,8 @@
                 Наушники Xiaomi Bluetooth Redmi Buds 6 Play Black
               </div>
             </a>
+            <!-- PRIZE_8_END -->
+            <!-- PRIZE_9_START -->
             <a
               href="https://go-go.md/products/nochniki-k-1155-cute-panda-panda?ysclid=mpx3g0uwwy472127586"
               target="_blank"
@@ -186,6 +202,8 @@
               <div class="prize-rank">9</div>
               <div class="prize-text">Ночники K-1155 Cute Panda</div>
             </a>
+            <!-- PRIZE_9_END -->
+            <!-- PRIZE_10_START -->
             <a
               href="https://go-go.md/products/naushniki-xiaomi-headphones-basic-chernye?ysclid=mpx3gmv1zp933702573"
               target="_blank"
@@ -196,6 +214,7 @@
                 Наушники Xiaomi Headphones Basic черные
               </div>
             </a>
+            <!-- PRIZE_10_END -->
           </div>
           <p
             style="
@@ -503,6 +522,24 @@
             "
           >
             Настройки акции
+          </button>
+          <button
+            id="tabSiteSettings"
+            class="btn btn-tab"
+            style="
+              background: none;
+              border: none;
+              color: var(--text-muted);
+              padding: 10px 15px;
+              font-weight: bold;
+              cursor: pointer;
+              font-size: 1.1rem;
+              border-radius: 0;
+              outline: none;
+              font-family: var(--font-heading);
+            "
+          >
+            Настройки сайта
           </button>
         </div>
 
@@ -831,6 +868,102 @@
               style="padding: 12px 30px; font-size: 1.05rem"
             >
               Сохранить настройки
+            </button>
+          </div>
+        </div>
+
+        <!-- Вкладка: Настройки сайта -->
+        <div
+          id="siteSettingsTabContent"
+          class="hidden"
+          style="
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 40px;
+          "
+        >
+          <h3 style="margin-bottom: 25px; color: var(--primary)">
+            ⚙️ Настройки сайта и призов
+          </h3>
+
+          <!-- Блок: Главный экран -->
+          <div style="background: #111; padding: 25px; border-radius: var(--radius); border-left: 4px solid var(--primary); margin-bottom: 30px;">
+            <h4 style="margin-bottom: 20px; color: var(--text-color); font-size: 1.15rem; font-family: var(--font-heading);">
+              📢 Главный экран
+            </h4>
+            
+            <div class="form-group" style="margin-bottom: 20px">
+              <label for="adminSiteTitle" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color);">
+                Заголовок акции (h1)
+              </label>
+              <input
+                type="text"
+                id="adminSiteTitle"
+                required
+                style="
+                  width: 100%;
+                  padding: 12px;
+                  border: 1px solid var(--border-color);
+                  border-radius: var(--radius);
+                  background-color: #121212;
+                  color: var(--text-color);
+                  font-size: 1rem;
+                  outline: none;
+                  transition: border-color 0.3s;
+                "
+              />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0">
+              <label for="adminSiteSubtitle" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-color);">
+                Подзаголовок акции (id="hero-prize-text")
+              </label>
+              <input
+                type="text"
+                id="adminSiteSubtitle"
+                required
+                style="
+                  width: 100%;
+                  padding: 12px;
+                  border: 1px solid var(--border-color);
+                  border-radius: var(--radius);
+                  background-color: #121212;
+                  color: var(--text-color);
+                  font-size: 1rem;
+                  outline: none;
+                  transition: border-color 0.3s;
+                "
+              />
+            </div>
+          </div>
+
+          <!-- Блок: Призы -->
+          <div style="background: #111; padding: 25px; border-radius: var(--radius); border-left: 4px solid var(--primary); margin-bottom: 30px;">
+            <h4 style="margin-bottom: 20px; color: var(--text-color); font-size: 1.15rem; font-family: var(--font-heading);">
+              🎁 Призы (10 штук)
+            </h4>
+
+            <div id="adminPrizesList" style="display: flex; flex-direction: column; gap: 20px;">
+              <!-- 10 призов генерируются динамически по данным из DOM -->
+            </div>
+          </div>
+
+          <div
+            id="siteSettingsMessage"
+            class="message"
+            style="margin-bottom: 25px"
+          ></div>
+
+          <div style="text-align: right">
+            <button
+              id="saveSiteSettingsBtn"
+              class="btn btn-primary"
+              style="padding: 12px 30px; font-size: 1.05rem;"
+            >
+              Сохранить настройки сайта
             </button>
           </div>
         </div>

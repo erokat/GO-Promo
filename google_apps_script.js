@@ -536,18 +536,31 @@ function doPost(e) {
           ).setMimeType(ContentService.MimeType.JSON);
         }
 
-        const PRIZES = [
-          "Смартфон Redmi Note 15 Pro Plus 5G 8/256",
-          "Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1",
-          "Видеорегистратор HOCO DV8 with rear camera",
-          "Наушники Baseus Bluetooth BH1 NC Black",
-          "Часы Xiaomi Redmi Watch 5 Active",
-          "Колонка Blackview Aurabass 3",
-          "Весы Xiaomi Mi Body Composition Scale S400",
-          "Наушники Redmi Buds 6 Play",
-          "Ночник Cute Panda",
-          "Наушники Xiaomi Headphones Basic",
-        ];
+        const properties = PropertiesService.getScriptProperties();
+        const sitePrizesStr = properties.getProperty("SITE_PRIZES");
+        let PRIZES = [];
+        if (sitePrizesStr) {
+          try {
+            const parsedPrizes = JSON.parse(sitePrizesStr);
+            PRIZES = parsedPrizes.map(function(item) { return item.name; });
+          } catch (e) {
+            // fallback
+          }
+        }
+        if (PRIZES.length === 0) {
+          PRIZES = [
+            "Смартфон Redmi Note 15 Pro Plus 5G 8/256",
+            "Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1",
+            "Видеорегистратор HOCO DV8 with rear camera",
+            "Наушники Baseus Bluetooth BH1 NC Black",
+            "Часы Xiaomi Redmi Watch 5 Active",
+            "Колонка Blackview Aurabass 3",
+            "Весы Xiaomi Mi Body Composition Scale S400",
+            "Наушники Redmi Buds 6 Play",
+            "Ночник Cute Panda",
+            "Наушники Xiaomi Headphones Basic",
+          ];
+        }
 
         // Новое логика: находим первый свободный приз
         const usedPrizes = [];
@@ -884,6 +897,121 @@ function doPost(e) {
       }
     }
 
+    if (data.action === "saveSiteSettings") {
+      const token = data.token;
+      const cache = CacheService.getScriptCache();
+      const adminUser = token ? cache.get("auth_" + token) : null;
+      if (!token || !adminUser) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Необходима авторизация" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // Серверная валидация схем URL для каждого приза (Рек. 3)
+      if (data.prizes && Array.isArray(data.prizes)) {
+        for (let i = 0; i < data.prizes.length; i++) {
+          const item = data.prizes[i];
+          if (!item.name || !item.link || !validateUrlGas(item.link)) {
+            return ContentService.createTextOutput(
+              JSON.stringify({
+                success: false,
+                message: "Недопустимая или пустая ссылка у приза №" + (item.idx || (i + 1)),
+              }),
+            ).setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+      } else {
+        return ContentService.createTextOutput(
+          JSON.stringify({ success: false, message: "Некорректный формат призов" }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const p = PropertiesService.getScriptProperties();
+      const githubToken = p.getProperty("GITHUB_TOKEN");
+      const githubOwner = p.getProperty("GITHUB_OWNER");
+      const githubRepo = p.getProperty("GITHUB_REPO");
+
+      if (!githubToken || !githubOwner || !githubRepo) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "В Script Properties на стороне Google Apps Script не настроены GITHUB_TOKEN, GITHUB_OWNER или GITHUB_REPO.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        // Получаем файл index.html из репозитория через GitHub API
+        const url = "https://api.github.com/repos/" + githubOwner + "/" + githubRepo + "/contents/index.html";
+        const getResponse = UrlFetchApp.fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": "token " + githubToken,
+            "Accept": "application/vnd.github.v3+json",
+          },
+          muteHttpExceptions: true,
+        });
+
+        if (getResponse.getResponseCode() !== 200) {
+          return ContentService.createTextOutput(
+            JSON.stringify({
+              success: false,
+              message: "Не удалось получить index.html из GitHub репозитория (код: " + getResponse.getResponseCode() + ")",
+            }),
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        const fileData = JSON.parse(getResponse.getContentText());
+        const oldContentEncoded = fileData.content;
+        const indexHtmlContent = Utilities.newBlob(Utilities.base64Decode(oldContentEncoded)).getDataAsString("UTF-8");
+
+        // Производим замену
+        const newHtmlContent = replaceSiteSettings(indexHtmlContent, data.title, data.subtitle, data.prizes);
+
+        // Проверяем, изменился ли файл. Если изменений нет, GitHub API не дергаем
+        if (indexHtmlContent.trim() === newHtmlContent.trim()) {
+          return ContentService.createTextOutput(
+            JSON.stringify({
+              success: true,
+              no_changes: true,
+              message: "Изменения отсутствуют",
+            }),
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        // Обновляем index.html в репозитории через GitHub API
+        updateGitFile(
+          githubOwner,
+          githubRepo,
+          githubToken,
+          "index.html",
+          newHtmlContent,
+          "admin: update site settings (title, subtitle, prizes)"
+        );
+
+        // Синхронизируем список призов на стороне GAS для динамических розыгрышей
+        p.setProperty("SITE_PRIZES", JSON.stringify(data.prizes));
+
+        // Логируем действие администратора
+        logAction("UPDATE_SITE_SETTINGS", "index.html", adminUser);
+
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: true,
+            message: "Настройки сохранены. Изменения отправлены в GitHub Pages и будут опубликованы через несколько минут.",
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+
+      } catch (err) {
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            success: false,
+            message: "Ошибка при обновлении настроек сайта: " + err.toString(),
+          }),
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     return ContentService.createTextOutput(
       JSON.stringify({
         success: false,
@@ -929,4 +1057,121 @@ function logAction(actionName, receipt, adminUser) {
   } catch (err) {
     console.error("Ошибка при записи лога:", err);
   }
+}
+
+// Вспомогательная функция для обновления файла в GitHub репозитории
+function updateGitFile(owner, repo, token, path, newContent, commitMessage) {
+  const url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + path;
+  
+  const getResponse = UrlFetchApp.fetch(url, {
+    method: "GET",
+    headers: {
+      "Authorization": "token " + token,
+      "Accept": "application/vnd.github.v3+json"
+    },
+    muteHttpExceptions: true
+  });
+  
+  const getStatus = getResponse.getResponseCode();
+  if (getStatus !== 200) {
+    throw new Error("Не удалось получить файл " + path + " из GitHub API (код: " + getStatus + "): " + getResponse.getContentText());
+  }
+  
+  const fileData = JSON.parse(getResponse.getContentText());
+  const sha = fileData.sha;
+  
+  const blob = Utilities.newBlob(newContent, "text/html", "UTF-8");
+  const base64Content = Utilities.base64Encode(blob.getBytes());
+  
+  const payload = {
+    message: commitMessage,
+    content: base64Content,
+    sha: sha
+  };
+  
+  const putResponse = UrlFetchApp.fetch(url, {
+    method: "PUT",
+    headers: {
+      "Authorization": "token " + token,
+      "Content-Type": "application/json",
+      "Accept": "application/vnd.github.v3+json"
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  
+  const putStatus = putResponse.getResponseCode();
+  if (putStatus !== 200 && putStatus !== 201) {
+    throw new Error("Не удалось обновить файл " + path + " в GitHub API (код: " + putStatus + "): " + putResponse.getContentText());
+  }
+  
+  return true;
+}
+
+// Вспомогательная функция для экранирования небезопасного HTML (защита от XSS)
+function escapeHtmlGas(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Вспомогательная функция для валидации схем URL (Рек. 3)
+function validateUrlGas(urlStr) {
+  if (!urlStr) return false;
+  const s = String(urlStr).toLowerCase().trim();
+  if (!s.startsWith("http://") && !s.startsWith("https://")) {
+    return false;
+  }
+  if (s.includes("javascript:") || s.includes("data:") || s.includes("file:")) {
+    return false;
+  }
+  return true;
+}
+
+// Замена заголовка, подзаголовка и призов в index.html с помощью комментариев-маркеров
+function replaceSiteSettings(htmlContent, title, subtitle, prizes) {
+  let result = htmlContent;
+  
+  const safeTitle = escapeHtmlGas(title);
+  const safeSubtitle = escapeHtmlGas(subtitle);
+  
+  const titleRegex = /<!-- HERO_TITLE_START -->[\s\S]*?<!-- HERO_TITLE_END -->/g;
+  result = result.replace(titleRegex, "<!-- HERO_TITLE_START -->" + safeTitle + "<!-- HERO_TITLE_END -->");
+  
+  const subtitleRegex = /<!-- HERO_SUBTITLE_START -->[\s\S]*?<!-- HERO_SUBTITLE_END -->/g;
+  result = result.replace(subtitleRegex, "<!-- HERO_SUBTITLE_START -->" + safeSubtitle + "<!-- HERO_SUBTITLE_END -->");
+  
+  for (let i = 0; i < prizes.length; i++) {
+    const p = prizes[i];
+    const prizeNum = p.idx;
+    const pStartMarker = "<!-- PRIZE_" + prizeNum + "_START -->";
+    const pEndMarker = "<!-- PRIZE_" + prizeNum + "_END -->";
+    
+    // Экранируем ссылку и название приза для безопасности
+    const safeLink = p.link.replace(/"/g, "&quot;");
+    const safeName = escapeHtmlGas(p.name);
+    
+    // Создаем экранированное регулярное выражение для этого приза
+    const pRegex = new RegExp(pStartMarker + "[\\s\\S]*?" + pEndMarker, "g");
+    const replacementHtml = pStartMarker + "\n" +
+      '            <a\n' +
+      '              href="' + safeLink + '"\n' +
+      '              target="_blank"\n' +
+      '              class="prize-card"\n' +
+      '            >\n' +
+      '              <div class="prize-rank">' + prizeNum + '</div>\n' +
+      '              <div class="prize-text">\n' +
+      '                ' + safeName + '\n' +
+      '              </div>\n' +
+      '            </a>\n' +
+      '            ' + pEndMarker;
+    
+    result = result.replace(pRegex, replacementHtml);
+  }
+  
+  return result;
 }

@@ -605,26 +605,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  const PRIZES = [
-    "1. Смартфон Redmi Note 15 Pro Plus 5G 8/256",
-    "2. Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1",
-    "3. Видеорегистратор HOCO DV8 with rear camera",
-    "4. Наушники Baseus Bluetooth BH1 NC Black",
-    "5. Часы Xiaomi Redmi Watch 5 Active",
-    "6. Колонка Blackview Bluetooth Aurabass 3",
-    "7. Весы Xiaomi Mi Body Composition Scale S400",
-    "8. Наушники Redmi Buds 6 Play",
-    "9. Ночник Cute Panda",
-    "10. Наушники Xiaomi Headphones Basic",
-  ];
+  function getDynamicPrizes() {
+    const cards = document.querySelectorAll(".prizes-grid .prize-card");
+    if (cards.length > 0) {
+      return Array.from(cards).map((card, i) => {
+        const textNode = card.querySelector(".prize-text");
+        const name = textNode ? textNode.textContent.trim().replace(/\s+/g, " ") : "";
+        return `${i + 1}. ${name}`;
+      });
+    }
+    return [
+      "1. Смартфон Redmi Note 15 Pro Plus 5G 8/256",
+      "2. Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1",
+      "3. Видеорегистратор HOCO DV8 with rear camera",
+      "4. Наушники Baseus Bluetooth BH1 NC Black",
+      "5. Часы Xiaomi Redmi Watch 5 Active",
+      "6. Колонка Blackview Bluetooth Aurabass 3",
+      "7. Весы Xiaomi Mi Body Composition Scale S400",
+      "8. Наушники Redmi Buds 6 Play",
+      "9. Ночник Cute Panda",
+      "10. Наушники Xiaomi Headphones Basic",
+    ];
+  }
 
   function resolvePrizeName(prizeValue) {
     if (!prizeValue) return "";
     const num = parseInt(prizeValue, 10);
-    if (!isNaN(num) && num >= 1 && num <= PRIZES.length) {
-      return PRIZES[num - 1]; // Already includes ID
+    const prizesList = getDynamicPrizes();
+    if (!isNaN(num) && num >= 1 && num <= prizesList.length) {
+      return prizesList[num - 1]; // Already includes ID
     }
-    return String(prizeValue);
+    const str = String(prizeValue).trim();
+    const matched = prizesList.find(p => p === str || p.replace(/^\d+\.\s+/, "") === str);
+    if (matched) return matched;
+    return str;
   }
 
   // Функция экранирования HTML для предотвращения XSS
@@ -835,7 +849,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     list.innerHTML = "";
 
-    PRIZES.forEach((prizeName, index) => {
+    getDynamicPrizes().forEach((prizeName, index) => {
       const prizeId = index + 1;
       // Correct identification logic:
       const winner = currentWinners.find((w) => {
@@ -865,7 +879,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       item.style.gap = "8px";
 
       item.innerHTML = `
-            <div style="font-weight: bold; font-size: 0.95rem; color: #fff;">${prizeName}</div>
+            <div style="font-weight: bold; font-size: 0.95rem; color: #fff;">${escapeHTML(prizeName)}</div>
             <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
                 <div style="font-size: 0.9rem; font-weight: 600; color: ${taken ? "#ff6b6b" : "#51cf66"};">
                     ${taken ? "🔴 Разыгран" : "🟢 В наличии"}
@@ -874,8 +888,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                   taken
                     ? `
                     <div style="font-size: 0.85rem; color: #aaa;">
-                        <div>Чек: ${winner.receipt}</div>
-                        <div>Дата: ${formatDate(winner.date)}</div>
+                        <div>Чек: ${escapeHTML(winner.receipt)}</div>
+                        <div>Дата: ${escapeHTML(formatDate(winner.date))}</div>
                     </div>
                 `
                     : ""
@@ -1559,29 +1573,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         const winnerIndex = Math.floor(Math.random() * eligible.length);
         const winner = eligible[winnerIndex];
 
-        const PRIZES = [
-          "Смартфон Redmi Note 15 Pro Plus 5G 8/256",
-          "Матрас туристический Youpin One Night Automatic Inflatable Leisure Bed PS1",
-          "Видеорегистратор HOCO DV8 with rear camera",
-          "Наушники Baseus Bluetooth BH1 NC Black",
-          "Часы Xiaomi Redmi Watch 5 Active",
-          "Колонка Blackview Aurabass 3",
-          "Весы Xiaomi Mi Body Composition Scale S400",
-          "Наушники Redmi Buds 6 Play",
-          "Ночник Cute Panda",
-          "Наушники Xiaomi Headphones Basic",
-        ];
+        const dynamicPrizesList = getDynamicPrizes();
 
         const currentWinnersCount = winners.length;
-        if (currentWinnersCount >= PRIZES.length) {
-          msg.textContent = "Все главные призы (10 мест) уже разыграны!";
+        if (currentWinnersCount >= dynamicPrizesList.length) {
+          msg.textContent = `Все главные призы (${dynamicPrizesList.length} мест) уже разыграны!`;
           msg.className = "message error";
           btn.disabled = false;
           return;
         }
         const usedPrizes = winners.map((w) => parseInt(w.prize, 10));
         let prizeIndex = -1;
-        for (let i = PRIZES.length; i >= 1; i--) {
+        for (let i = dynamicPrizesList.length; i >= 1; i--) {
           if (!usedPrizes.includes(i)) {
             prizeIndex = i;
             break;
@@ -1626,10 +1629,52 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---- ЛОГИКА ВКЛАДОК ПАНЕЛИ АДМИНИСТРАТОРА ----
   const tabParticipants = document.getElementById("tabParticipants");
   const tabSettings = document.getElementById("tabSettings");
+  const tabSiteSettings = document.getElementById("tabSiteSettings");
   const participantsTabContent = document.getElementById(
     "participantsTabContent",
   );
   const settingsTabContent = document.getElementById("settingsTabContent");
+  const siteSettingsTabContent = document.getElementById("siteSettingsTabContent");
+
+  function fillSiteSettingsInputs() {
+    const titleInput = document.getElementById("adminSiteTitle");
+    const subtitleInput = document.getElementById("adminSiteSubtitle");
+    
+    const heroTitleNode = document.getElementById("hero-title");
+    if (titleInput) {
+      titleInput.value = heroTitleNode ? heroTitleNode.textContent.trim() : "";
+    }
+    
+    const heroSubTitleNode = document.getElementById("hero-prize-text");
+    if (subtitleInput) {
+      subtitleInput.value = heroSubTitleNode ? heroSubTitleNode.textContent.trim().replace(/\s+/g, " ") : "";
+    }
+
+    const container = document.getElementById("adminPrizesList");
+    if (container) {
+      container.innerHTML = "";
+      const cards = document.querySelectorAll(".prizes-grid .prize-card");
+      cards.forEach((card, i) => {
+        const link = card.getAttribute("href") || "";
+        const name = card.querySelector(".prize-text").textContent.trim().replace(/\s+/g, " ");
+        
+        const itemDiv = document.createElement("div");
+        itemDiv.style.cssText = "display: grid; grid-template-columns: 50px 1fr 1fr; gap: 15px; align-items: center; background: #0a0a0a; padding: 15px; border-radius: var(--radius); border: 1px solid #222;";
+        itemDiv.innerHTML = `
+          <div style="font-weight: bold; font-size: 1.2rem; color: var(--primary); text-align: center;">${i + 1}</div>
+          <div>
+            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:5px;">Название приза</label>
+            <input type="text" class="admin-prize-name" data-index="${i + 1}" value="${escapeHTML(name)}" style="width:100%; padding:8px 10px; border:1px solid var(--border-color); border-radius:var(--radius); background:#121212; color:#fff;" />
+          </div>
+          <div>
+            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:5px;">Ссылка на приз</label>
+            <input type="text" class="admin-prize-link" data-index="${i + 1}" value="${escapeHTML(link)}" style="width:100%; padding:8px 10px; border:1px solid var(--border-color); border-radius:var(--radius); background:#121212; color:#fff;" />
+          </div>
+        `;
+        container.appendChild(itemDiv);
+      });
+    }
+  }
 
   let adminStartDatePicker = null;
   let adminEndDatePicker = null;
@@ -1751,7 +1796,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return null;
   }
 
-  if (tabParticipants && tabSettings) {
+  if (tabParticipants && tabSettings && tabSiteSettings) {
     tabParticipants.addEventListener("click", () => {
       tabParticipants.classList.add("active");
       tabParticipants.style.color = "var(--primary)";
@@ -1761,8 +1806,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       tabSettings.style.color = "var(--text-muted)";
       tabSettings.style.borderBottom = "none";
 
+      tabSiteSettings.classList.remove("active");
+      tabSiteSettings.style.color = "var(--text-muted)";
+      tabSiteSettings.style.borderBottom = "none";
+
       participantsTabContent.classList.remove("hidden");
       settingsTabContent.classList.add("hidden");
+      siteSettingsTabContent.classList.add("hidden");
     });
 
     tabSettings.addEventListener("click", () => {
@@ -1774,10 +1824,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       tabParticipants.style.color = "var(--text-muted)";
       tabParticipants.style.borderBottom = "none";
 
+      tabSiteSettings.classList.remove("active");
+      tabSiteSettings.style.color = "var(--text-muted)";
+      tabSiteSettings.style.borderBottom = "none";
+
       participantsTabContent.classList.add("hidden");
       settingsTabContent.classList.remove("hidden");
+      siteSettingsTabContent.classList.add("hidden");
 
       fillSettingsInputs();
+    });
+
+    tabSiteSettings.addEventListener("click", () => {
+      tabSiteSettings.classList.add("active");
+      tabSiteSettings.style.color = "var(--primary)";
+      tabSiteSettings.style.borderBottom = "3px solid var(--primary)";
+
+      tabParticipants.classList.remove("active");
+      tabParticipants.style.color = "var(--text-muted)";
+      tabParticipants.style.borderBottom = "none";
+
+      tabSettings.classList.remove("active");
+      tabSettings.style.color = "var(--text-muted)";
+      tabSettings.style.borderBottom = "none";
+
+      participantsTabContent.classList.add("hidden");
+      settingsTabContent.classList.add("hidden");
+      siteSettingsTabContent.classList.remove("hidden");
+
+      fillSiteSettingsInputs();
     });
   }
 
@@ -1881,6 +1956,173 @@ document.addEventListener("DOMContentLoaded", async () => {
       } finally {
         saveSettingsBtn.disabled = false;
         saveSettingsBtn.textContent = "Сохранить настройки";
+      }
+    });
+  }
+
+  // Сохранение настроек сайта через GitHub API
+  const saveSiteSettingsBtn = document.getElementById("saveSiteSettingsBtn");
+  if (saveSiteSettingsBtn) {
+    saveSiteSettingsBtn.addEventListener("click", async () => {
+      const msg = document.getElementById("siteSettingsMessage");
+      const titleVal = document.getElementById("adminSiteTitle").value.trim();
+      const subtitleVal = document.getElementById("adminSiteSubtitle").value.trim();
+
+      if (!titleVal || !subtitleVal) {
+        msg.textContent = "Пожалуйста, заполните заголовок и подзаголовок.";
+        msg.className = "message error";
+        return;
+      }
+
+      const newPrizes = [];
+      const nameInputs = document.querySelectorAll(".admin-prize-name");
+      const linkInputs = document.querySelectorAll(".admin-prize-link");
+
+      if (nameInputs.length !== 10 || linkInputs.length !== 10) {
+        msg.textContent = "Ошибка: не все поля призов заполнены (требуется ровно 10 призов).";
+        msg.className = "message error";
+        return;
+      }
+
+      for (let i = 0; i < 10; i++) {
+        const nameVal = nameInputs[i].value.trim();
+        const linkVal = linkInputs[i].value.trim();
+        if (!nameVal || !linkVal) {
+          msg.textContent = `Пожалуйста, заполните все поля для приза №${i + 1}.`;
+          msg.className = "message error";
+          return;
+        }
+
+        // Валидация ссылки приза (Рек. 3)
+        try {
+          const parsedUrl = new URL(linkVal);
+          if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+            msg.textContent = `Ссылка для приза №${i + 1} содержит недопустимый протокол. Разрешены только http:// и https://`;
+            msg.className = "message error";
+            return;
+          }
+        } catch (e) {
+          msg.textContent = `Приз №${i + 1} содержит невалидный URL.`;
+          msg.className = "message error";
+          return;
+        }
+
+        newPrizes.push({
+          idx: i + 1,
+          name: nameVal,
+          link: linkVal
+        });
+      }
+
+      // Проверка на отсутствие изменений
+      const curTitle = document.getElementById("hero-title") ? document.getElementById("hero-title").textContent.trim() : "";
+      const curSubtitle = document.getElementById("hero-prize-text") ? document.getElementById("hero-prize-text").textContent.trim().replace(/\s+/g, " ") : "";
+
+      let hasChanges = (titleVal !== curTitle || subtitleVal !== curSubtitle);
+      const currentCards = document.querySelectorAll(".prizes-grid .prize-card");
+      currentCards.forEach((card, i) => {
+        const curLink = card.getAttribute("href") || "";
+        const curName = card.querySelector(".prize-text").textContent.trim().replace(/\s+/g, " ");
+        if (newPrizes[i].name !== curName || newPrizes[i].link !== curLink) {
+          hasChanges = true;
+        }
+      });
+
+      if (!hasChanges) {
+        msg.textContent = "Изменения отсутствуют";
+        msg.className = "message error";
+        return;
+      }
+
+      saveSiteSettingsBtn.disabled = true;
+      saveSiteSettingsBtn.textContent = "Сохранение...";
+      msg.textContent = "";
+      msg.className = "message";
+
+      try {
+        if (useMock) {
+          await new Promise((r) => setTimeout(r, 1000));
+          
+          // Локальное безопасное обновление DOM (textContent вместо innerHTML)
+          const titleEl = document.getElementById("hero-title");
+          if (titleEl) {
+            titleEl.textContent = titleVal;
+          }
+          
+          const subtitleEl = document.getElementById("hero-prize-text");
+          if (subtitleEl) {
+            subtitleEl.textContent = subtitleVal;
+          }
+
+          const currentCards = document.querySelectorAll(".prizes-grid .prize-card");
+          currentCards.forEach((card, i) => {
+            card.setAttribute("href", newPrizes[i].link);
+            const textDiv = card.querySelector(".prize-text");
+            if (textDiv) {
+              textDiv.textContent = newPrizes[i].name;
+            }
+          });
+
+          msg.textContent = "Настройки сайта успешно сохранены (демо-режим).";
+          msg.className = "message success";
+          fillSiteSettingsInputs();
+        } else {
+          const payload = {
+            action: "saveSiteSettings",
+            token: adminToken,
+            title: titleVal,
+            subtitle: subtitleVal,
+            prizes: newPrizes
+          };
+
+          const res = await fetch(config.googleScriptUrl, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
+
+          const json = await res.json();
+          if (json.success) {
+            if (json.no_changes) {
+              msg.textContent = "Изменения отсутствуют";
+              msg.className = "message error";
+            } else {
+              // Локально безопасное обновление DOM (textContent вместо innerHTML)
+              const titleEl = document.getElementById("hero-title");
+              if (titleEl) {
+                titleEl.textContent = titleVal;
+              }
+              
+              const subtitleEl = document.getElementById("hero-prize-text");
+              if (subtitleEl) {
+                subtitleEl.textContent = subtitleVal;
+              }
+
+              const currentCards = document.querySelectorAll(".prizes-grid .prize-card");
+              currentCards.forEach((card, i) => {
+                card.setAttribute("href", newPrizes[i].link);
+                const textDiv = card.querySelector(".prize-text");
+                if (textDiv) {
+                  textDiv.textContent = newPrizes[i].name;
+                }
+              });
+
+              msg.textContent = json.message || "Настройки сохранены. Изменения отправлены в GitHub Pages и будут опубликованы через несколько минут.";
+              msg.className = "message success";
+              fillSiteSettingsInputs();
+            }
+          } else {
+            msg.textContent = json.message || "Не удалось сохранить настройки сайта.";
+            msg.className = "message error";
+          }
+        }
+      } catch (err) {
+        console.error("Ошибка при сохранении настроек сайта:", err);
+        msg.textContent = "Произошла ошибка связи с сервером.";
+        msg.className = "message error";
+      } finally {
+        saveSiteSettingsBtn.disabled = false;
+        saveSiteSettingsBtn.textContent = "Сохранить настройки сайта";
       }
     });
   }
