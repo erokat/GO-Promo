@@ -1631,20 +1631,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   const settingsTabContent = document.getElementById("settingsTabContent");
 
+  let adminStartDatePicker = null;
+  let adminEndDatePicker = null;
+  let adminDrawDatePicker = null;
+
   function fillSettingsInputs() {
     const startInput = document.getElementById("adminStartDate");
     const endInput = document.getElementById("adminEndDate");
     const drawInput = document.getElementById("adminDrawDate");
 
-    if (startInput && config.startDate) {
-      startInput.value = formatDateTimeLocal(config.startDate);
+    const pickerOptions = {
+      enableTime: true,
+      dateFormat: "d.m.Y H:i",
+      time_24hr: true,
+      locale: "ru",
+      disableMobile: true,
+    };
+
+    if (startInput) {
+      if (!adminStartDatePicker) {
+        adminStartDatePicker = flatpickr("#adminStartDate", pickerOptions);
+      }
+      if (config.startDate) {
+        adminStartDatePicker.setDate(new Date(config.startDate));
+      }
     }
-    if (endInput && config.endDate) {
-      endInput.value = formatDateTimeLocal(config.endDate);
+
+    if (endInput) {
+      if (!adminEndDatePicker) {
+        adminEndDatePicker = flatpickr("#adminEndDate", pickerOptions);
+      }
+      if (config.endDate) {
+        adminEndDatePicker.setDate(new Date(config.endDate));
+      }
     }
-    if (drawInput && config.drawDate) {
-      drawInput.value = formatDateTimeLocal(config.drawDate);
+
+    if (drawInput) {
+      if (!adminDrawDatePicker) {
+        adminDrawDatePicker = flatpickr("#adminDrawDate", pickerOptions);
+      }
+      if (config.drawDate) {
+        adminDrawDatePicker.setDate(new Date(config.drawDate));
+      }
     }
+
     const publishInput = document.getElementById("publishWinners");
     if (publishInput) {
       publishInput.checked = config.winnersPublished === true;
