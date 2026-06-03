@@ -1595,7 +1595,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const drawVal = document.getElementById("adminDrawDate").value;
 
       if (!startVal || !endVal || !drawVal) {
-        msg.textContent = "Пожалуйста, заполните все обязательные поля.";
+        msg.textContent = "Пожалуйста, заполните все поля.";
         msg.className = "message error";
         return;
       }
