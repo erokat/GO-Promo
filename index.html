@@ -40,14 +40,16 @@
       <!-- Баннер акции -->
       <section class="hero">
         <div class="container hero-content">
-          <h1>Отпразднуй день рождения сети салонов GO<br>
-            вместе с нами!</h1>
+          <h1>Отпразднуй день рождения сети салонов GO вместе с нами!</h1>
           <p
+            id="hero-prize-text"
             style="
-              font-size: 1.3rem;
+              font-size: 2.2rem;
               margin-bottom: 25px;
               color: var(--primary);
-              font-weight: 600;
+              font-weight: 700;
+              line-height: 1.2;
+              text-transform: uppercase;
             "
           >
             Выиграй главный приз — смартфон Xiaomi!
@@ -78,92 +80,6 @@
               Ожидайте оглашения результатов!
             </p>
           </div>
-
-          <div class="rules">
-            <div
-              style="
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 20px;
-                text-align: left;
-              "
-            >
-              <div>
-                <h3 style="color: var(--primary); margin-bottom: 10px">
-                  Условия участия:
-                </h3>
-                <ul style="line-height: 1.8; padding-left: 0; list-style-type: none; counter-reset: item;">
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">1</span>
-                    <span>Совершите покупку в любом салоне GO.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">2</span>
-                    <span>
-                      Сумма покупки должна составлять
-                      <strong style="color: var(--primary)">не менее 1500 рублей</strong>.
-                    </span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">3</span>
-                    <span>Сохраните кассовый чек.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">4</span>
-                    <span>Зарегистрируйте чек на сайте акции.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">5</span>
-                    <span>Укажите номер телефона для связи.</span>
-                  </li>
-                  <li style="counter-increment: item; display: flex; gap: 10px;">
-                    <span style="font-weight: 600; min-width: 15px;">6</span>
-                    <span>Получите шанс выиграть главный приз.</span>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h3 style="color: var(--primary); margin-bottom: 10px">
-                  Дополнительные правила:
-                </h3>
-                <ul
-                  style="
-                    line-height: 1.8;
-                    padding-left: 15px;
-                    font-size: 0.95rem;
-                  "
-                >
-                  <li>Один чек может быть зарегистрирован только один раз.</li>
-                  <li>Каждый чек участвует как отдельная заявка.</li>
-                  <li>
-                    Организатор вправе запросить оригинал чека для подтверждения
-                    выигрыша.
-                  </li>
-                  <li>
-                    Победитель определяется случайным образом среди всех
-                    зарегистрированных участников.
-                  </li>
-                  <li>
-                    Результаты публикуются на сайте акции и/или в социальных
-                    сетях GO.
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div
-              style="
-                padding-top: 15px;
-                margin-top: 15px;
-                border-top: 1px solid var(--border-color);
-                font-size: 0.95rem;
-                color: var(--text-muted);
-                text-align: center;
-              "
-            >
-              <strong>Регистрация чеков:</strong> <span id="registrationPeriodText">с 15 по 30 июня 2026 года</span><br />
-              <strong>Розыгрыш главного приза:</strong> <span id="drawDateText">2 июля 2026 года</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -175,21 +91,11 @@
               text-align: center;
               font-size: 2rem;
               color: var(--primary);
-              margin-bottom: 10px;
-            "
-          >
-            Призовой фонд акции
-          </h2>
-          <p
-            style="
-              text-align: center;
-              color: var(--text-muted);
               margin-bottom: 30px;
-              font-size: 1.1rem;
             "
           >
-            Каждый чек участвует в розыгрыше ценных призов на юбилей GO!
-          </p>
+            Много призов — больше шансов на победу!
+          </h2>
           <div class="prizes-grid">
             <a
               href="https://go-go.md/products/smartfon-xiaomi-redmi-note-15-pro-plus-5g-8256-simesim-glacier-blue?ysclid=mpx3ampj4b351101638"
@@ -291,13 +197,123 @@
               </div>
             </a>
           </div>
+          <p
+            style="
+              text-align: center;
+              margin-top: 40px;
+              color: #ffffff;
+              font-size: 1.15rem;
+              line-height: 1.6;
+              max-width: 800px;
+              margin-left: auto;
+              margin-right: auto;
+              font-weight: 500;
+            "
+          >
+            Покупайте в салонах GO на сумму от
+            <span style="color: var(--primary)">1500 рублей</span>,
+            регистрируйте чек и участвуйте в розыгрыше призов ко дню рождения
+            сети!
+          </p>
+        </div>
+      </section>
+
+      <!-- Условия участия -->
+      <section class="rules-section">
+        <div class="container">
+          <div class="rules">
+            <div
+              style="
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+                border-bottom: 1px solid var(--border-color);
+                font-size: 1rem;
+                color: var(--text-color);
+                text-align: center;
+              "
+            >
+              <h3 style="color: var(--primary); margin-bottom: 15px; text-align: center;">Сроки акции</h3>
+              Регистрация чеков: <span id="registrationPeriodText" style="color: var(--primary); font-weight: 700;">с 15 июня по 30 июня 2026 года</span><br />
+              Розыгрыш: <span id="drawDateText" style="color: var(--primary); font-weight: 700;">2 июля 2026 года</span>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                text-align: left;
+              "
+            >
+              <div>
+                <h3 style="color: var(--primary); margin-bottom: 10px">
+                  Условия участия:
+                </h3>
+                <ul style="line-height: 1.8; padding-left: 0; list-style-type: none; counter-reset: item;">
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">1</span>
+                    <span>Совершите покупку в любом салоне GO.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">2</span>
+                    <span>
+                      Сумма покупки должна составлять
+                      <strong style="color: var(--primary)">не менее 1500 рублей</strong>.
+                    </span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">3</span>
+                    <span>Сохраните кассовый чек.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">4</span>
+                    <span>Зарегистрируйте чек на сайте акции.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">5</span>
+                    <span>Укажите номер телефона для связи.</span>
+                  </li>
+                  <li style="counter-increment: item; display: flex; gap: 10px;">
+                    <span style="font-weight: 600; min-width: 15px;">6</span>
+                    <span>Получите шанс выиграть главный приз.</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 style="color: var(--primary); margin-bottom: 10px">
+                  Дополнительные правила:
+                </h3>
+                <ul
+                  style="
+                    line-height: 1.8;
+                    padding-left: 15px;
+                    font-size: 0.95rem;
+                  "
+                >
+                  <li>Один чек может быть зарегистрирован только один раз.</li>
+                  <li>Каждый чек участвует как отдельная заявка.</li>
+                  <li>
+                    Организатор вправе запросить оригинал чека для подтверждения
+                    выигрыша.
+                  </li>
+                  <li>
+                    Победитель определяется случайным образом среди всех
+                    зарегистрированных участников.
+                  </li>
+                  <li>
+                    Результаты публикуются на сайте акции и/или в социальных
+                    сетях GO.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <!-- Форма регистрации чека -->
       <section class="registration-form">
         <div class="container">
-          <h2>Регистрация чека</h2>
+          <h2>Форма регистрации</h2>
           <form id="promoForm">
             <div class="form-group">
               <label for="receipt">Фискальный код чека (ФД)</label>
@@ -320,7 +336,7 @@
                     id="checkDate"
                     name="checkDate"
                     required
-                    placeholder="Дата(ДД.ММ.ГГГГ)"
+                    placeholder="ДД.ММ.ГГГГ"
                   />
                 </div>
                 <div style="flex: 1">
@@ -329,7 +345,7 @@
                     id="checkTimeOnly"
                     name="checkTimeOnly"
                     required
-                    placeholder="Время(ЧЧ:ММ:СС)"
+                    placeholder="ЧЧ:ММ:СС"
                     oninput="
                       this.value = this.value.replace(/[^0-9:\.\-]/g, '')
                     "
@@ -338,7 +354,7 @@
               </div>
             </div>
             <div class="form-group">
-              <label for="amount">Сумма покупки (руб.)</label>
+              <label for="amount">Сумма</label>
               <input
                 type="number"
                 id="amount"
@@ -376,7 +392,7 @@
               </div>
             </div>
             <div id="formMessage" class="message"></div>
-            <button type="submit" class="btn btn-primary" id="submitBtn">
+            <button type="submit" class="btn btn-primary" id="submitBtn" style="text-transform: uppercase;">
               Зарегистрировать чек
             </button>
           </form>

@@ -132,7 +132,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.style.cursor = "not-allowed";
         btn.textContent = "Регистрация еще не началась";
         if (msg) {
-          msg.textContent = `Регистрация чеков начнется ${start.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })} в ${start.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}.`;
+          const dateStr = start.toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) + ` ${start.getFullYear()} года`;
+          msg.textContent = `Регистрация чеков начнется ${dateStr} в ${start.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}.`;
           msg.className = "message info";
         }
         return false;
@@ -147,7 +148,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.style.cursor = "not-allowed";
         btn.textContent = "Регистрация завершена";
         if (msg) {
-          msg.textContent = `Регистрация чеков завершена ${end.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })} в ${end.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}.`;
+          const dateStr = end.toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) + ` ${end.getFullYear()} года`;
+          msg.textContent = `Регистрация чеков завершена ${dateStr} в ${end.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}.`;
           msg.className = "message error";
         }
         return false;
@@ -176,21 +178,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const start = new Date(config.startDate);
       const end = new Date(config.endDate);
       
-      const options = { day: 'numeric', month: 'long', year: 'numeric' };
-      const startStr = start.toLocaleDateString('ru-RU', { day: 'numeric' });
-      const endStr = end.toLocaleDateString('ru-RU', options);
+      const startStr = start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const endMonthDay = end.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const year = end.getFullYear();
       
-      // Если один и тот же месяц и год
-      if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-         regText.textContent = `с ${start.getDate()} по ${endStr}`;
-      } else {
-         regText.textContent = `с ${start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} по ${endStr}`;
-      }
+      regText.textContent = `с ${startStr} по ${endMonthDay} ${year} года`;
     }
 
     if (config.drawDate && drawText) {
       const draw = new Date(config.drawDate);
-      drawText.textContent = draw.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      const drawMonthDay = draw.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const drawYear = draw.getFullYear();
+      drawText.textContent = `${drawMonthDay} ${drawYear} года`;
     }
   }
 
@@ -399,31 +398,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function normalizeTime(timeStr) {
     let cleaned = timeStr.trim();
-    // Если это просто 4 цифры без разделителей, например "1430"
-    if (/^\d{4}$/.test(cleaned)) {
-      const h = parseInt(cleaned.substring(0, 2), 10);
-      const m = parseInt(cleaned.substring(2, 4), 10);
-      if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-      }
+    
+    // Strict format check for HH:MM:SS
+    const strictRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+    if (!strictRegex.test(cleaned)) {
+      return null; // Return null to indicate invalid format
     }
 
-    let parts = cleaned.split(/[:\.\s\-]+/);
-    let hoursStr = "12";
-    let minutesStr = "00";
-    if (parts.length >= 1) {
-      const h = parseInt(parts[0], 10);
-      if (!isNaN(h) && h >= 0 && h < 24) {
-        hoursStr = String(h).padStart(2, "0");
-      }
-    }
-    if (parts.length >= 2) {
-      const m = parseInt(parts[1], 10);
-      if (!isNaN(m) && m >= 0 && m < 60) {
-        minutesStr = String(m).padStart(2, "0");
-      }
-    }
-    return `${hoursStr}:${minutesStr}`;
+    return cleaned;
   }
 
   if (promoForm) {
@@ -494,7 +476,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const checkTime = `${checkDateVal}T${normalizeTime(checkTimeOnlyVal)}`;
+    const normalizedTime = normalizeTime(checkTimeOnlyVal);
+    if (!normalizedTime) {
+      msg.textContent = "Неверное время. Формат должен быть ЧЧ:ММ:СС (включая секунды).";
+      msg.className = "message error";
+      return;
+    }
+
+    const checkTime = `${checkDateVal}T${normalizedTime}`;
     const checkDate = new Date(checkTime);
     
     // Используем динамические даты из конфига. Если они не загружены, используем максимально широкий диапазон.
@@ -661,6 +650,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        second: "2-digit",
       })
       .replace(",", "");
   }
@@ -764,7 +754,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <h4>🎉 Победитель №${w.prize || idx + 1}</h4>
                     <div class="receipt">${escapeHTML(masked)}</div>
                     ${w.prize ? `<div class="prize-info" style="color:var(--primary); font-weight:bold; margin-top: 5px; font-size:0.95rem;">${escapeHTML(resolvePrizeName(w.prize))}</div>` : ""}
-                    <div class="date"><small>Дата розыгрыша: ${escapeHTML(formatDate(w.date))}</small></div>
+                    ${isAdmin ? `<div class="date"><small>Дата розыгрыша: ${escapeHTML(formatDate(w.date))}</small></div>` : ""}
                 `;
         list.appendChild(card);
       });
@@ -782,7 +772,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("participantsBody").innerHTML = `
       <tr>
         <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted, #888);">
-          <div class="loader-spinner" style="display: inline-block; width: 22px; height: 22px; border: 2.5px solid #333; border-top-color: var(--primary, #00a658); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 12px; vertical-align: middle;"></div>
+          <div class="loader-spinner" style="display: inline-block; width: 22px; height: 22px; border: 2.5px solid #333; border-top-color: var(--primary, #19a369); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 12px; vertical-align: middle;"></div>
           Загрузка участников...
         </td>
       </tr>
@@ -1102,7 +1092,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       title.style.fontSize = "1.3rem";
       if (isSuccess) {
         title.textContent = "Успешно!";
-        title.style.color = "var(--primary, #00a658)";
+        title.style.color = "var(--primary, #19a369)";
       } else {
         title.textContent = "Уведомление";
         title.style.color = "#ffcc00";
@@ -1119,7 +1109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       okBtn.className = "btn";
       okBtn.textContent = "ОК";
       okBtn.style.padding = "10px 30px";
-      okBtn.style.background = isSuccess ? "var(--primary, #00a658)" : "#444";
+      okBtn.style.background = isSuccess ? "var(--primary, #19a369)" : "#444";
       okBtn.style.color = "white";
       okBtn.style.border = "none";
       okBtn.style.cursor = "pointer";
@@ -1507,8 +1497,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       statusText.style.color = "var(--error, #cf6679)";
       toggleBtn.textContent = "🟢 Открыть регистрацию";
       toggleBtn.className = "btn btn-outline";
-      toggleBtn.style.color = "var(--primary, #00a658)";
-      toggleBtn.style.borderColor = "var(--primary, #00a658)";
+      toggleBtn.style.color = "var(--primary, #19a369)";
+      toggleBtn.style.borderColor = "var(--primary, #19a369)";
     }
   }
 
