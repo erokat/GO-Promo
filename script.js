@@ -399,6 +399,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   function normalizeTime(timeStr) {
     let cleaned = timeStr.trim();
     
+    // Check if browser returned HH:MM (length 5)
+    if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(cleaned)) {
+      cleaned += ":00";
+    }
+    
     // Strict format check for HH:MM:SS
     const strictRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
     if (!strictRegex.test(cleaned)) {
@@ -1676,48 +1681,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  let adminStartDatePicker = null;
-  let adminEndDatePicker = null;
-  let adminDrawDatePicker = null;
-
   function fillSettingsInputs() {
     const startInput = document.getElementById("adminStartDate");
     const endInput = document.getElementById("adminEndDate");
     const drawInput = document.getElementById("adminDrawDate");
 
-    const pickerOptions = {
-      enableTime: true,
-      dateFormat: "d.m.Y H:i",
-      time_24hr: true,
-      locale: "ru",
-      disableMobile: true,
-    };
-
-    if (startInput) {
-      if (!adminStartDatePicker) {
-        adminStartDatePicker = flatpickr("#adminStartDate", pickerOptions);
-      }
-      if (config.startDate) {
-        adminStartDatePicker.setDate(new Date(config.startDate));
-      }
+    if (startInput && config.startDate) {
+      startInput.value = formatAdminDate(new Date(config.startDate));
     }
 
-    if (endInput) {
-      if (!adminEndDatePicker) {
-        adminEndDatePicker = flatpickr("#adminEndDate", pickerOptions);
-      }
-      if (config.endDate) {
-        adminEndDatePicker.setDate(new Date(config.endDate));
-      }
+    if (endInput && config.endDate) {
+      endInput.value = formatAdminDate(new Date(config.endDate));
     }
 
-    if (drawInput) {
-      if (!adminDrawDatePicker) {
-        adminDrawDatePicker = flatpickr("#adminDrawDate", pickerOptions);
-      }
-      if (config.drawDate) {
-        adminDrawDatePicker.setDate(new Date(config.drawDate));
-      }
+    if (drawInput && config.drawDate) {
+      drawInput.value = formatAdminDate(new Date(config.drawDate));
     }
 
     const publishInput = document.getElementById("publishWinners");
@@ -1726,6 +1704,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     updateRegistrationStatusUI();
+  }
+
+  // Вспомогательная функция форматирования даты для админки (ДД.ММ.ГГГГ ЧЧ:ММ)
+  function formatAdminDate(dateObj) {
+    if (isNaN(dateObj.getTime())) return "";
+    const dd = String(dateObj.getDate()).padStart(2, "0");
+    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const yyyy = dateObj.getFullYear();
+    const hh = String(dateObj.getHours()).padStart(2, "0");
+    const mins = String(dateObj.getMinutes()).padStart(2, "0");
+    return `${dd}.${mm}.${yyyy} ${hh}:${mins}`;
   }
 
   function updateRegistrationStatusUI() {
