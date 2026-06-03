@@ -751,10 +751,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "***";
 
         card.innerHTML = `
-                    <h4>🎉 Победитель №${w.prize || idx + 1}</h4>
-                    <div class="receipt">${escapeHTML(masked)}</div>
-                    ${w.prize ? `<div class="prize-info" style="color:var(--primary); font-weight:bold; margin-top: 5px; font-size:0.95rem;">${escapeHTML(resolvePrizeName(w.prize))}</div>` : ""}
-                    ${isAdmin ? `<div class="date"><small>Дата розыгрыша: ${escapeHTML(formatDate(w.date))}</small></div>` : ""}
+                    <h4 style="margin-bottom: 8px; font-family: var(--font-heading); font-size: 1.25rem;">🎉 Победитель №${w.prize || idx + 1}</h4>
+                    <div class="winner-name" style="font-size: 1.15rem; font-weight: 600; color: var(--primary, #19a369); margin-bottom: 10px; font-family: var(--font-heading);">${escapeHTML(w.name || "Участник")}</div>
+                    <div class="receipt" style="font-family: monospace; font-size: 1.1rem; background: #121212; padding: 4px 10px; border-radius: 4px; color: var(--text-color); margin-bottom: 15px; display: inline-block; border: 1px solid var(--border-color);">${escapeHTML(masked)}</div>
+                    ${w.prize ? `<div class="prize-info" style="color: var(--primary, #19a369); font-weight: bold; margin-top: 5px; font-size: 0.95rem;">${escapeHTML(resolvePrizeName(w.prize))}</div>` : ""}
+                    ${isAdmin ? `<div class="date" style="margin-top: 12px; font-size: 0.8rem; opacity: 0.7;"><small>Дата розыгрыша: ${escapeHTML(formatDate(w.date))}</small></div>` : ""}
                 `;
         list.appendChild(card);
       });
