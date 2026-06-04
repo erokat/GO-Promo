@@ -653,8 +653,8 @@ function doPost(e) {
         }
 
         let prizeIndex = -1;
-        // Очередность от 1 до N (первым делом разыгрывается Смартфон (1), потом Матрас (2), и т.д.)
-        for (let i = 1; i <= PRIZES.length; i++) {
+        // Очередность от N до 1 (первым делом разыгрывается последний приз, потом предпоследний, и т.д.)
+        for (let i = PRIZES.length; i >= 1; i--) {
           if (!usedPrizes.includes(i)) {
             prizeIndex = i;
             break;

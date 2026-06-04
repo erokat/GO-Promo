@@ -1464,7 +1464,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         msg.style.opacity = "1";
         msg.style.transition = "";
 
-        // Автоматическое скрытие через 10 секунд
+        // Автоматическое скрытие через 4 секунды
         if (window.winnerHideTimeout) {
           clearTimeout(window.winnerHideTimeout);
         }
@@ -1478,7 +1478,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             msg.style.opacity = "";
             msg.style.transition = "";
           }, 1000);
-        }, 10000);
+        }, 4000);
       }
 
       if (!useMock) {
