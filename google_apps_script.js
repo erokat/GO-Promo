@@ -1204,8 +1204,10 @@ function doPost(e) {
 
         // Замена меток в HTML
         let newHtmlContent = indexHtmlContent.replace(/<!-- MIN_AMOUNT_START -->\d+<!-- MIN_AMOUNT_END -->/g, "<!-- MIN_AMOUNT_START -->" + newAmount + "<!-- MIN_AMOUNT_END -->");
-        newHtmlContent = newHtmlContent.replace(/(id="amount"[\s\S]*?min=")\d+("/, '$1' + newAmount + '$2');
-        newHtmlContent = newHtmlContent.replace(/(id="amount"[\s\S]*?placeholder="Минимум )\d+( рублей")/, '$1' + newAmount + '$2');
+        newHtmlContent = newHtmlContent.replace(/<input[^>]+id="amount"[\s\S]*?>/, function(match) {
+          return match.replace(/(min=")\d+(")/, '$1' + newAmount + '$2')
+                      .replace(/(placeholder="Минимум )\d+( рублей")/, '$1' + newAmount + '$2');
+        });
 
         let isUnchanged = false;
         if (indexHtmlContent.trim() === newHtmlContent.trim()) {
