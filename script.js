@@ -1659,11 +1659,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     container.innerHTML = "";
 
     const usedPrizes = winners.map((w) => parseInt(w.prize, 10));
-    const highestDrawnPrize = usedPrizes.length > 0 ? Math.max(...usedPrizes) : 0;
 
     localPrizes.forEach((p, i) => {
       const idx = i + 1;
-      const isDeleteAllowed = idx > highestDrawnPrize;
 
       const itemDiv = document.createElement("div");
       itemDiv.className = "admin-prize-row";
@@ -1681,9 +1679,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
         <div style="text-align: center;">
           <button type="button" class="delete-prize-btn btn" data-index="${i}" 
-                  ${isDeleteAllowed ? "" : "disabled style='opacity: 0.4; cursor: not-allowed; background: #555;'"}
                   style="margin-top: 18px; padding: 8px 12px; background: #cf6679; color: #fff; border: none; border-radius: var(--radius); cursor: pointer;"
-                  title="${isDeleteAllowed ? "Удалить приз" : "Этот приз или приз с большим номером уже разыгран"}">
+                  title="Удалить приз">
             🗑
           </button>
         </div>
@@ -1712,18 +1709,55 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const deleteBtns = container.querySelectorAll(".delete-prize-btn");
     deleteBtns.forEach(btn => {
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         saveCurrentInputsToLocal();
         const deleteIndex = parseInt(btn.getAttribute("data-index"), 10);
         const prizeIdx = deleteIndex + 1;
 
-        if (prizeIdx <= highestDrawnPrize) {
-          const msg = document.getElementById("siteSettingsMessage");
-          if (msg) {
-            msg.textContent = "Ошибка: этот приз или приз с большим номером уже разыгран!";
-            msg.className = "message error";
+        // Check if this prize is already won
+        const winnerForPrize = winners.find(w => parseInt(w.prize, 10) === prizeIdx);
+
+        if (winnerForPrize) {
+          const confirmMsg = `Внимание! Этот приз (№${prizeIdx}) уже разыгран (Победитель: ${winnerForPrize.name}). Если вы удалите приз, победа этого участника будет аннулирована. Продолжить?`;
+          if (!confirm(confirmMsg)) {
+            return;
           }
-          return;
+
+          if (!useMock) {
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            try {
+              const res = await fetch(config.googleScriptUrl, {
+                method: "POST",
+                body: JSON.stringify({
+                  action: "removeWinner",
+                  token: adminToken,
+                  receipt: winnerForPrize.receipt
+                })
+              });
+              const json = await res.json();
+              if (!json.success) {
+                alert("Ошибка отмены победителя: " + json.message);
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                return;
+              }
+              // Перезагружаем кэш победителей с сервера
+              await loadAdminData();
+            } catch (err) {
+              alert("Сетевая ошибка при удалении победителя.");
+              btn.disabled = false;
+              btn.style.opacity = "1";
+              return;
+            }
+          } else {
+            winners = winners.filter(w => w.receipt !== winnerForPrize.receipt);
+            let pObj = participants.find((p) => p.receipt === winnerForPrize.receipt);
+            if (pObj) pObj.status = "";
+            currentWinnersCount = winners.length;
+            localStorage.setItem("lottery_participants", JSON.stringify(participants));
+            localStorage.setItem("lottery_winners", JSON.stringify(winners));
+          }
         }
 
         localPrizes.splice(deleteIndex, 1);
