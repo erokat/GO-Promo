@@ -52,7 +52,7 @@
               text-transform: uppercase;
             "
           >
-            <!-- HERO_SUBTITLE_START -->Выиграй главный приз — смартфон Xiaomi !<!-- HERO_SUBTITLE_END -->
+            <!-- HERO_SUBTITLE_START -->Выиграй главный приз — смартфон Xiaomi!<!-- HERO_SUBTITLE_END -->
           </p>
 
           <!-- Отсчет до розыгрыша -->
@@ -234,7 +234,7 @@
             "
           >
             Покупайте в салонах GO на сумму от
-            <span style="color: var(--primary)"><span id="promoMinAmountText1"><!-- MIN_AMOUNT_START -->1000<!-- MIN_AMOUNT_END --></span> рублей</span>,
+            <span style="color: var(--primary)"><span id="promoMinAmountText1"><!-- MIN_AMOUNT_START -->1500<!-- MIN_AMOUNT_END --></span> рублей</span>,
             регистрируйте чек и участвуйте в розыгрыше призов ко дню рождения
             сети!
           </p>
@@ -291,9 +291,9 @@
                 id="amount"
                 name="amount"
                 required
-                min="1000"
+                min="1500"
                 step="1"
-                placeholder="Минимум 1000 рублей"
+                placeholder="Минимум 1500 рублей"
                 oninput="this.value = this.value.replace(/\D/g, '')"
               />
             </div>
@@ -372,7 +372,7 @@
                     <span style="font-weight: 600; min-width: 15px; color: var(--primary);">2</span>
                     <span>
                       Сумма покупки должна составлять<br />
-                      <strong style="color: var(--primary)">не менее <span id="promoMinAmountText2"><!-- MIN_AMOUNT_START -->1000<!-- MIN_AMOUNT_END --></span> рублей</strong>.
+                      <strong style="color: var(--primary)">не менее <span id="promoMinAmountText2"><!-- MIN_AMOUNT_START -->1500<!-- MIN_AMOUNT_END --></span> рублей</strong>.
                     </span>
                   </li>
                   <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
@@ -856,36 +856,6 @@
             </div>
           </div>
 
-          <div
-            id="settingsMessage"
-            class="message"
-            style="margin-bottom: 25px"
-          ></div>
-
-          <div style="text-align: right">
-            <button
-              id="saveSettingsBtn"
-              class="btn btn-primary"
-              style="padding: 12px 30px; font-size: 1.05rem"
-            >
-              Сохранить настройки
-            </button>
-          </div>
-        </div>
-
-        <!-- Вкладка: Настройки сайта -->
-        <div
-          id="siteSettingsTabContent"
-          class="hidden"
-          style="
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            margin-bottom: 40px;
-          "
-        >
           <h3 style="margin-bottom: 25px; color: var(--primary)">
             💰 Минимальная сумма покупки
           </h3>
@@ -934,6 +904,36 @@
             ></div>
           </div>
 
+          <div
+            id="settingsMessage"
+            class="message"
+            style="margin-bottom: 25px"
+          ></div>
+
+          <div style="text-align: right">
+            <button
+              id="saveSettingsBtn"
+              class="btn btn-primary"
+              style="padding: 12px 30px; font-size: 1.05rem"
+            >
+              Сохранить настройки
+            </button>
+          </div>
+        </div>
+
+        <!-- Вкладка: Настройки сайта -->
+        <div
+          id="siteSettingsTabContent"
+          class="hidden"
+          style="
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 40px;
+          "
+        >
           <h3 style="margin-bottom: 25px; color: var(--primary)">
             ⚙️ Настройки сайта и призов
           </h3>
