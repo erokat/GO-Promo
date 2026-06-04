@@ -69,18 +69,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         config.registrationEnabled =
           data.settings.registrationEnabled === "true" ||
           data.settings.registrationEnabled === true;
-        config.winnersPublished =
+                config.winnersPublished =
           data.settings.winnersPublished === "true" ||
           data.settings.winnersPublished === true;
-        if (data.settings.prizes && data.settings.prizes.length > 0) {
-          config.prizes = data.settings.prizes;
-        }
-        if (data.settings.heroTitle) {
-          config.heroTitle = data.settings.heroTitle;
-        }
-        if (data.settings.heroSubtitle) {
-          config.heroSubtitle = data.settings.heroSubtitle;
-        }
       }
     } catch (err) {
       console.warn(
@@ -102,25 +93,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Загружаем динамические настройки из Google Sheets / LocalStorage
     await loadSettings();
-
-    // Обновляем заголовок и подзаголовок из динамических настроек, если они есть
-    if (config.heroTitle) {
-      const titleEl = document.getElementById("hero-title");
-      if (titleEl) {
-        titleEl.textContent = config.heroTitle;
-      }
-    }
-    if (config.heroSubtitle) {
-      const subtitleEl = document.getElementById("hero-prize-text");
-      if (subtitleEl) {
-        subtitleEl.textContent = config.heroSubtitle;
-      }
-    }
-
-    // Обновляем призы, если они получены динамически
-    if (config.prizes && config.prizes.length > 0) {
-      updateFrontEndPrizesUI(config.prizes);
-    }
 
     // Обновляем тексты и инициализируем календарь
     updateDynamicDateTexts();
@@ -2223,7 +2195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
               updateFrontEndPrizesUI(newPrizes);
 
-              msg.textContent = json.message || "Настройки сохранены. Изменения отправлены в GitHub Pages и будут опубликованы через несколько минут.";
+              msg.textContent = json.message || "Настройки сохранены. Изменения отправлены на сервер и будут опубликованы через несколько минут.";
               msg.className = "message success";
               fillSiteSettingsInputs();
             }
