@@ -52,7 +52,7 @@
               text-transform: uppercase;
             "
           >
-            <!-- HERO_SUBTITLE_START -->Выиграй главный приз — смартфон Xiaomi !<!-- HERO_SUBTITLE_END -->
+            <!-- HERO_SUBTITLE_START -->Выиграй главный приз — смартфон Xiaomi!<!-- HERO_SUBTITLE_END -->
           </p>
 
           <!-- Отсчет до розыгрыша -->
@@ -234,7 +234,7 @@
             "
           >
             Покупайте в салонах GO на сумму от
-            <span style="color: var(--primary)"><span id="promoMinAmountText1"><!-- MIN_AMOUNT_START -->2000<!-- MIN_AMOUNT_END --></span> рублей</span>,
+            <span style="color: var(--primary)"><span id="promoMinAmountText1"><!-- MIN_AMOUNT_START -->1500<!-- MIN_AMOUNT_END --></span> рублей</span>,
             регистрируйте чек и участвуйте в розыгрыше призов ко дню рождения
             сети!
           </p>
@@ -291,9 +291,9 @@
                 id="amount"
                 name="amount"
                 required
-                min="2000"
+                min="1500"
                 step="1"
-                placeholder="Минимум 2000 рублей"
+                placeholder="Минимум 1500 рублей"
                 oninput="this.value = this.value.replace(/\D/g, '')"
               />
             </div>
@@ -372,7 +372,7 @@
                     <span style="font-weight: 600; min-width: 15px; color: var(--primary);">2</span>
                     <span>
                       Сумма покупки должна составлять<br />
-                      <strong style="color: var(--primary)">не менее <span id="promoMinAmountText2"><!-- MIN_AMOUNT_START -->2000<!-- MIN_AMOUNT_END --></span> рублей</strong>.
+                      <strong style="color: var(--primary)">не менее <span id="promoMinAmountText2"><!-- MIN_AMOUNT_START -->1500<!-- MIN_AMOUNT_END --></span> рублей</strong>.
                     </span>
                   </li>
                   <li style="counter-increment: item; display: flex; gap: 10px; margin-bottom: 10px;">
@@ -1082,6 +1082,37 @@
               <code>config.json</code> (В поле <code>googleScriptUrl</code>).
             </li>
           </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Кастомная iOS-крутилка для выбора времени (только для iOS устройств) -->
+    <div id="iosTimePickerOverlay" class="ios-time-picker-overlay">
+      <div class="ios-time-picker-container" id="iosTimePickerContainer">
+        <div class="ios-time-picker-header">
+          <button type="button" class="ios-time-picker-btn ios-time-picker-btn-cancel" id="iosTimePickerCancel">Отмена</button>
+          <span class="ios-time-picker-title">Время чека</span>
+          <button type="button" class="ios-time-picker-btn ios-time-picker-btn-done" id="iosTimePickerDone">Готово</button>
+        </div>
+        <div class="ios-time-picker-body">
+          <div class="ios-time-picker-shading"></div>
+          <div class="ios-time-picker-selection-highlight"></div>
+          
+          <!-- Часы -->
+          <div class="ios-time-picker-wheel" id="iosPickerWheelHours"></div>
+          
+          <!-- Минуты -->
+          <div class="ios-time-picker-wheel" id="iosPickerWheelMinutes"></div>
+          
+          <!-- Секунды -->
+          <div class="ios-time-picker-wheel" id="iosPickerWheelSeconds"></div>
+
+          <!-- Названия колонок (чтобы пользователю было понятно) -->
+          <div class="ios-time-picker-labels">
+            <div class="ios-time-picker-label">ч</div>
+            <div class="ios-time-picker-label">м</div>
+            <div class="ios-time-picker-label">с</div>
+          </div>
         </div>
       </div>
     </div>

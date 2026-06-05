@@ -291,6 +291,178 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupModal.classList.add("hidden"),
   );
 
+  // ---- НАСТРОЙКА iOS TIME PICKER ДЛЯ SAFARI ----
+  {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const checkTimeOnlyInput = document.getElementById("checkTimeOnly");
+
+    if (checkTimeOnlyInput && isIOS) {
+      // Делаем поле только для чтения на iOS, чтобы не всплывала нативная урезанная клавиатура
+      checkTimeOnlyInput.setAttribute("readonly", "true");
+      checkTimeOnlyInput.style.cursor = "pointer";
+
+      // Открытие кастомной крутилки при клике
+      checkTimeOnlyInput.addEventListener("click", (e) => {
+        e.preventDefault();
+        openIosTimePicker();
+      });
+    }
+
+    function openIosTimePicker() {
+      const overlay = document.getElementById("iosTimePickerOverlay");
+      if (!overlay) return;
+      
+      overlay.classList.add("active");
+
+      // Считываем текущее значение или ставим текущее время
+      let currentVal = checkTimeOnlyInput ? checkTimeOnlyInput.value.trim() : "";
+      let h = "12", m = "00", s = "00";
+      if (currentVal) {
+        const parts = currentVal.split(":");
+        if (parts.length === 3) {
+          h = parts[0];
+          m = parts[1];
+          s = parts[2];
+        } else if (parts.length === 2) {
+          h = parts[0];
+          m = parts[1];
+          s = "00";
+        }
+      } else {
+        const now = new Date();
+        h = String(now.getHours()).padStart(2, "0");
+        m = String(now.getMinutes()).padStart(2, "0");
+        s = String(now.getSeconds()).padStart(2, "0");
+      }
+
+      const hoursWheel = document.getElementById("iosPickerWheelHours");
+      const minutesWheel = document.getElementById("iosPickerWheelMinutes");
+      const secondsWheel = document.getElementById("iosPickerWheelSeconds");
+
+      // Инициализируем колеса, если они еще не заполнены
+      if (hoursWheel && hoursWheel.children.length === 0) {
+        const generateItems = (wheel, min, max) => {
+          wheel.innerHTML = "";
+          for (let i = min; i <= max; i++) {
+            const valStr = String(i).padStart(2, "0");
+            const item = document.createElement("div");
+            item.className = "ios-time-picker-item";
+            item.setAttribute("data-value", valStr);
+            item.textContent = valStr;
+
+            item.addEventListener("click", () => {
+              const index = i - min;
+              wheel.scrollTo({
+                top: index * 40,
+                behavior: "smooth"
+              });
+            });
+
+            wheel.appendChild(item);
+          }
+        };
+
+        generateItems(hoursWheel, 0, 23);
+        generateItems(minutesWheel, 0, 59);
+        generateItems(secondsWheel, 0, 59);
+
+        const attachScrollListener = (wheel) => {
+          wheel.addEventListener("scroll", () => {
+            const scrollTop = wheel.scrollTop;
+            const items = wheel.querySelectorAll(".ios-time-picker-item");
+            const index = Math.min(Math.max(Math.round(scrollTop / 40), 0), items.length - 1);
+
+            items.forEach((item, idx) => {
+              if (idx === index) {
+                item.classList.add("selected");
+              } else {
+                item.classList.remove("selected");
+              }
+            });
+          });
+        };
+
+        attachScrollListener(hoursWheel);
+        attachScrollListener(minutesWheel);
+        attachScrollListener(secondsWheel);
+      }
+
+      const scrollToVal = (wheel, value) => {
+        if (!wheel) return;
+        const items = Array.from(wheel.querySelectorAll(".ios-time-picker-item"));
+        const targetIndex = items.findIndex(item => item.getAttribute("data-value") === String(value).padStart(2, "0"));
+        if (targetIndex !== -1) {
+          wheel.scrollTop = targetIndex * 40;
+          items.forEach((item, idx) => {
+            if (idx === targetIndex) {
+              item.classList.add("selected");
+            } else {
+              item.classList.remove("selected");
+            }
+          });
+        }
+      };
+
+      // Прокручиваем после микрозадержки для корректного вычисления геометрии в Safari
+      setTimeout(() => {
+        scrollToVal(hoursWheel, h);
+        scrollToVal(minutesWheel, m);
+        scrollToVal(secondsWheel, s);
+      }, 50);
+    }
+
+    // Закрытие по кнопке "Отмена"
+    const cancelBtn = document.getElementById("iosTimePickerCancel");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => {
+        document.getElementById("iosTimePickerOverlay").classList.remove("active");
+      });
+    }
+
+    // Закрытие по клику на фон
+    const overlayPicker = document.getElementById("iosTimePickerOverlay");
+    if (overlayPicker) {
+      overlayPicker.addEventListener("click", (e) => {
+        if (e.target === overlayPicker) {
+          overlayPicker.classList.remove("active");
+        }
+      });
+    }
+
+    // Сохранение по кнопке "Готово"
+    const doneBtn = document.getElementById("iosTimePickerDone");
+    if (doneBtn) {
+      doneBtn.addEventListener("click", () => {
+        const hoursWheel = document.getElementById("iosPickerWheelHours");
+        const minutesWheel = document.getElementById("iosPickerWheelMinutes");
+        const secondsWheel = document.getElementById("iosPickerWheelSeconds");
+
+        const getSelectedVal = (wheel) => {
+          if (!wheel) return "00";
+          const items = wheel.querySelectorAll(".ios-time-picker-item");
+          const index = Math.min(Math.max(Math.round(wheel.scrollTop / 40), 0), items.length - 1);
+          return items[index] ? items[index].getAttribute("data-value") : "00";
+        };
+
+        const finalH = getSelectedVal(hoursWheel);
+        const finalM = getSelectedVal(minutesWheel);
+        const finalS = getSelectedVal(secondsWheel);
+
+        const finalTimeStr = `${finalH}:${finalM}:${finalS}`;
+
+        if (checkTimeOnlyInput) {
+          checkTimeOnlyInput.value = finalTimeStr;
+          checkTimeOnlyInput.dispatchEvent(new Event("input", { bubbles: true }));
+          checkTimeOnlyInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        document.getElementById("iosTimePickerOverlay").classList.remove("active");
+      });
+    }
+  }
+
   // Авторизация администратора
   const togglePasswordBtn = document.getElementById("togglePasswordBtn");
   const adminPassInput = document.getElementById("adminPass");
