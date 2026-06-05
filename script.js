@@ -291,7 +291,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupModal.classList.add("hidden"),
   );
 
-  // ---- НАСТРОЙКА iOS TIME PICKER ДЛЯ SAFARI ----
+  // ---- НАСТРОЙКА iOS TIME PICKER ТОЛЬКО ДЛЯ SAFARI (iOS/iPadOS) ----
   {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -299,15 +299,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     const checkTimeOnlyInput = document.getElementById("checkTimeOnly");
 
     if (checkTimeOnlyInput && isIOS) {
-      // Делаем поле только для чтения на iOS, чтобы не всплывала нативная урезанная клавиатура
-      checkTimeOnlyInput.setAttribute("readonly", "true");
+      // Чтобы нативный picker Safari/Chrome не открывался, меняем тип на text, делаем readonly и отключаем виртуальную клавиатуру
+      checkTimeOnlyInput.type = "text";
+      checkTimeOnlyInput.readOnly = true;
+      checkTimeOnlyInput.setAttribute("inputmode", "none");
+      checkTimeOnlyInput.placeholder = "ЧЧ:ММ:СС";
       checkTimeOnlyInput.style.cursor = "pointer";
 
-      // Открытие кастомной крутилки при клике
-      checkTimeOnlyInput.addEventListener("click", (e) => {
+      // Открытие кастомной крутилки при любом взаимодействии
+      const handleTrigger = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         openIosTimePicker();
-      });
+      };
+
+      checkTimeOnlyInput.addEventListener("click", handleTrigger);
+      checkTimeOnlyInput.addEventListener("focus", handleTrigger);
+      checkTimeOnlyInput.addEventListener("touchstart", handleTrigger, { passive: false });
     }
 
     function openIosTimePicker() {
