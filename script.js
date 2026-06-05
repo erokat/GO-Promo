@@ -310,11 +310,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       const handleTrigger = (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        if (document.activeElement) {
+          document.activeElement.blur();
+        }
+
+        checkTimeOnlyInput.blur();
+
         openIosTimePicker();
       };
 
       checkTimeOnlyInput.addEventListener("click", handleTrigger);
-      checkTimeOnlyInput.addEventListener("focus", handleTrigger);
       checkTimeOnlyInput.addEventListener("touchstart", handleTrigger, { passive: false });
     }
 
